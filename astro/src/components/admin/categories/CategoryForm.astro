@@ -1,0 +1,733 @@
+---
+import Toast from '../ui/Toast.astro';
+import { PB_URL } from '../../../lib/adminAuth';
+
+interface Props {
+  categoryId?: string;
+}
+
+const { categoryId = '' } = Astro.props;
+const isEdit = Boolean(categoryId);
+---
+
+<div
+  x-data={`categoryForm('${categoryId}', '${PB_URL}')`}
+  x-init="init()"
+  class="space-y-6"
+>
+  <Toast />
+
+  <!-- Action Bar & Breadcrumbs -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+    <div>
+      <div class="flex items-center gap-2 text-xs text-text-secondary mb-1 font-sans">
+        <a href="/manage/categories" class="hover:text-primary transition-colors">Категории</a>
+        <span>/</span>
+        <span class="text-gray-900 font-semibold" x-text="isEdit ? (form.name ? form.name : 'Редактирование категории') : 'Новая категория'"></span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-accent italic">
+        {isEdit ? 'Редактирование категории' : 'Создание категории'}
+      </h1>
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex flex-wrap items-center gap-2.5">
+      <a
+        href="/manage/categories"
+        class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold font-sans transition-colors cursor-pointer"
+      >
+        Отмена
+      </a>
+
+      <template x-if="isEdit">
+        <button
+          type="button"
+          @click="deleteCategory()"
+          :disabled="saving"
+          class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-red-200 bg-red-50 text-[#EF1C24] hover:bg-[#EF1C24] hover:text-white text-xs font-semibold font-sans transition-colors cursor-pointer disabled:opacity-50"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Удалить
+        </button>
+      </template>
+
+      <button
+        type="button"
+        @click="save(false)"
+        :disabled="saving"
+        class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-800 hover:bg-gray-50 text-xs font-semibold font-sans transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+      >
+        <template x-if="saving">
+          <svg class="animate-spin h-3.5 w-3.5 text-gray-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </template>
+        Сохранить и продолжить
+      </button>
+
+      <button
+        type="button"
+        @click="save(true)"
+        :disabled="saving"
+        class="inline-flex items-center gap-1.5 py-2.5 px-5 rounded-[8px] bg-[#EF1C24] hover:bg-[#d91920] active:scale-[0.99] text-white text-xs font-semibold font-sans transition-all shadow-xs cursor-pointer disabled:opacity-50"
+      >
+        <template x-if="saving">
+          <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </template>
+        Сохранить
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State Indicator -->
+  <div
+    x-show="loading"
+    x-cloak
+    class="py-20 text-center text-primary font-medium text-sm flex items-center justify-center gap-2"
+  >
+    <svg class="animate-spin h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    <span>Загрузка данных категории...</span>
+  </div>
+
+  <!-- Form Sections -->
+  <div x-show="!loading" class="space-y-6">
+    <!-- SECTION 1: ОСНОВНЫЕ ПАРАМЕТРЫ -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-[#EF1C24]"></span>
+        Основные данные категории
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Название -->
+        <div class="md:col-span-2">
+          <label for="category-name" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Название категории <span class="text-[#EF1C24]">*</span>
+          </label>
+          <input
+            id="category-name"
+            type="text"
+            x-model="form.name"
+            @input="onNameInput()"
+            placeholder="например: Промышленные рукава или Пищевые шланги"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all"
+            :class="{ 'border-[#EF1C24] bg-red-50/20': errors.name }"
+          />
+          <template x-if="errors.name">
+            <p class="text-[#EF1C24] text-[12px] mt-1 font-medium" x-text="errors.name"></p>
+          </template>
+        </div>
+
+        <!-- Slug -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="category-slug" class="block text-sm font-medium text-[#3B3B3B]">
+              URL Slug <span class="text-[#EF1C24]">*</span>
+            </label>
+            <button
+              type="button"
+              @click="generateSlug()"
+              class="text-xs text-primary hover:text-[#d91920] font-semibold transition-colors cursor-pointer"
+            >
+              Сгенерировать
+            </button>
+          </div>
+          <input
+            id="category-slug"
+            type="text"
+            x-model="form.slug"
+            @input="slugTouched = true; delete errors.slug"
+            placeholder="promyshlennye-rukava"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm font-mono text-gray-900 transition-all"
+            :class="{ 'border-[#EF1C24] bg-red-50/20': errors.slug }"
+          />
+          <template x-if="errors.slug">
+            <p class="text-[#EF1C24] text-[12px] mt-1 font-medium" x-text="errors.slug"></p>
+          </template>
+          <p class="text-xs text-text-secondary mt-1 font-mono">
+            URL: /katalog/<span x-text="parentSlug ? parentSlug + '/' : ''"></span><span x-text="form.slug || 'slug'"></span>/
+          </p>
+        </div>
+
+        <!-- Родительская категория -->
+        <div>
+          <label for="category-parent" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Родительская категория
+          </label>
+          <select
+            id="category-parent"
+            x-model="form.parent"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all cursor-pointer"
+          >
+            <option value="">— Корневая категория (без родителя) —</option>
+            <template x-for="cat in availableParents" :key="cat.id">
+              <option :value="cat.id" x-text="(cat.parent ? '  └─ ' : '') + cat.name"></option>
+            </template>
+          </select>
+          <p class="text-xs text-text-secondary mt-1">
+            Выберите «Корневая», если это основной раздел каталога.
+          </p>
+        </div>
+
+        <!-- Описание категории -->
+        <div class="md:col-span-2">
+          <label for="category-desc" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Описание категории
+          </label>
+          <textarea
+            id="category-desc"
+            rows="4"
+            x-model="form.description"
+            placeholder="Описание категории для каталога и поисковых систем..."
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all resize-y"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: ИЗОБРАЖЕНИЕ КАТЕГОРИИ -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-1 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+        Изображение категории
+      </h2>
+      <p class="text-xs text-text-secondary mb-4">
+        Отображается на главной странице, в шапке раздела и в карточке категории.
+      </p>
+
+      <div class="flex flex-col sm:flex-row items-start gap-5">
+        <!-- Preview Box -->
+        <div class="w-32 h-32 rounded-[8px] border border-border bg-gray-50 overflow-hidden flex items-center justify-center flex-shrink-0 relative group shadow-2xs">
+          <template x-if="imagePreview">
+            <div class="w-full h-full relative">
+              <img :src="imagePreview" alt="Category image" class="w-full h-full object-cover" />
+              <button
+                type="button"
+                @click="removeImage()"
+                class="absolute top-1.5 right-1.5 w-6 h-6 rounded-full bg-black/70 hover:bg-[#EF1C24] text-white flex items-center justify-center text-xs transition-colors cursor-pointer"
+                title="Удалить фото"
+              >
+                ×
+              </button>
+            </div>
+          </template>
+          <template x-if="!imagePreview">
+            <div class="flex flex-col items-center justify-center text-gray-400 p-2 text-center">
+              <svg class="w-8 h-8 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+              </svg>
+              <span class="text-[10px] text-gray-400">Нет фото</span>
+            </div>
+          </template>
+        </div>
+
+        <!-- Upload Area -->
+        <div class="flex-1 w-full">
+          <div
+            @dragover.prevent="isDraggingOver = true"
+            @dragleave.prevent="isDraggingOver = false"
+            @drop.prevent="handleDrop($event)"
+            @click="$refs.fileInput.click()"
+            class="border-2 border-dashed rounded-[8px] p-5 text-center transition-all cursor-pointer"
+            :class="isDraggingOver ? 'border-[#EF1C24] bg-red-50/30 ring-2 ring-[#EF1C24]/10' : 'border-gray-200 hover:border-gray-300 bg-[#F7FAFC]'"
+          >
+            <input
+              type="file"
+              x-ref="fileInput"
+              @change="handleFileInput($event)"
+              accept="image/jpeg,image/png,image/webp"
+              class="hidden"
+            />
+            <div class="pointer-events-none">
+              <p class="text-xs sm:text-sm font-semibold text-gray-800">
+                Перетащите изображение сюда или <span class="text-primary underline">выберите файл</span>
+              </p>
+              <p class="text-[11px] text-gray-500 mt-1">
+                JPG, PNG, WebP до 5 МБ
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: SEO И ПРЕДПРОСМОТР -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-1 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+        Поисковая оптимизация (SEO)
+      </h2>
+      <p class="text-xs text-text-secondary mb-5">
+        Настройка мета-тегов для поисковых систем.
+      </p>
+
+      <div class="space-y-5">
+        <!-- Meta Title -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="meta-title" class="block text-sm font-medium text-[#3B3B3B]">
+              Meta Title
+            </label>
+            <span
+              class="text-xs font-mono"
+              :class="form.meta_title.length > 60 ? 'text-orange-600 font-semibold' : 'text-gray-400'"
+              x-text="form.meta_title.length + '/60'"
+            ></span>
+          </div>
+          <input
+            id="meta-title"
+            type="text"
+            x-model="form.meta_title"
+            placeholder="например: Промышленные рукава и шланги в Минске и Гродно | БелФлекс"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all"
+          />
+        </div>
+
+        <!-- Meta Description -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="meta-desc" class="block text-sm font-medium text-[#3B3B3B]">
+              Meta Description
+            </label>
+            <span
+              class="text-xs font-mono"
+              :class="form.meta_description.length > 160 ? 'text-orange-600 font-semibold' : 'text-gray-400'"
+              x-text="form.meta_description.length + '/160'"
+            ></span>
+          </div>
+          <textarea
+            id="meta-desc"
+            rows="3"
+            x-model="form.meta_description"
+            placeholder="например: Большой выбор промышленных рукавов для воды, пара, химии и нефтепродуктов. Сертифицированная продукция со склада в Гродно..."
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-sm text-gray-900 transition-all resize-y"
+          ></textarea>
+        </div>
+
+        <!-- Live Google SERP Snippet Preview -->
+        <div class="p-4 bg-[#F8F9FA] rounded-[8px] border border-[#DADCE0] mt-4">
+          <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
+            Предпросмотр в поисковой выдаче Google (SERP)
+          </div>
+
+          <div class="bg-white p-4 rounded-[6px] border border-gray-200 shadow-2xs font-sans max-w-2xl">
+            <div class="flex items-center gap-2 text-xs mb-1">
+              <div class="w-4 h-4 rounded-full bg-[#EF1C24] text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                Б
+              </div>
+              <div class="truncate text-[#202124] text-xs">
+                <span class="font-medium">ООО «БелФлекс»</span>
+                <span class="text-[#5f6368] text-[11px]"> › katalog › <span x-text="form.slug || 'kategoriya'"></span></span>
+              </div>
+            </div>
+
+            <h4 class="text-base sm:text-lg text-[#1a0dab] hover:underline cursor-pointer font-medium leading-snug truncate">
+              <span x-text="form.meta_title ? form.meta_title : (form.name ? form.name + ' — ООО «БелФлекс»' : 'Название категории — ООО «БелФлекс»')"></span>
+            </h4>
+
+            <p class="text-xs sm:text-sm text-[#4d5156] leading-relaxed mt-1 line-clamp-2">
+              <span x-text="form.meta_description ? form.meta_description : (form.description ? form.description : 'Каталог продукции ООО «БелФлекс». Официальные поставки со склада в Гродно. Сертификаты соответствия, быстрая доставка...')"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: НАСТРОЙКИ ПУБЛИКАЦИИ -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+        Настройки публикации
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- Toggle: Активна -->
+        <div class="flex items-center justify-between p-3.5 bg-[#F7FAFC] rounded-[8px] border border-border">
+          <div>
+            <label class="block text-sm font-semibold text-gray-900 cursor-pointer" @click="form.is_active = !form.is_active">
+              Активна
+            </label>
+            <span class="text-xs text-text-secondary">Отображать в каталоге сайта</span>
+          </div>
+          <button
+            type="button"
+            @click="form.is_active = !form.is_active"
+            :class="form.is_active ? 'bg-green-500' : 'bg-gray-300'"
+            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+            role="switch"
+            :aria-checked="form.is_active"
+          >
+            <span
+              :class="form.is_active ? 'translate-x-5' : 'translate-x-0'"
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+            ></span>
+          </button>
+        </div>
+
+        <!-- Sort Order -->
+        <div>
+          <label for="sort-order" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Порядок сортировки
+          </label>
+          <input
+            id="sort-order"
+            type="number"
+            x-model.number="form.sort_order"
+            min="0"
+            step="1"
+            placeholder="0"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-sm text-gray-900 transition-all font-mono"
+          />
+          <p class="text-xs text-text-secondary mt-1">Чем меньше число, тем выше в меню каталога.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Global Category Form Alpine Script -->
+<script is:inline>
+  window.categoryForm = function(id, pbUrl) {
+    return {
+      pb: null,
+      categoryId: id || '',
+      pbUrl: pbUrl || 'http://127.0.0.1:8090',
+      isEdit: Boolean(id),
+      loading: false,
+      saving: false,
+      slugTouched: false,
+      allCategories: [],
+      errors: {},
+      imageFile: null,
+      imagePreview: '',
+      isImageDeleted: false,
+      isDraggingOver: false,
+
+      form: {
+        name: '',
+        slug: '',
+        parent: '',
+        description: '',
+        meta_title: '',
+        meta_description: '',
+        is_active: true,
+        sort_order: 0,
+      },
+
+      get availableParents() {
+        if (!this.categoryId) return this.allCategories;
+        // Exclude self and all descendants to prevent circular dependencies
+        const excludedIds = new Set([this.categoryId]);
+        
+        // Find direct and indirect children
+        let changed = true;
+        while (changed) {
+          changed = false;
+          this.allCategories.forEach(cat => {
+            if (cat.parent && excludedIds.has(cat.parent) && !excludedIds.has(cat.id)) {
+              excludedIds.add(cat.id);
+              changed = true;
+            }
+          });
+        }
+
+        return this.allCategories.filter(cat => !excludedIds.has(cat.id));
+      },
+
+      get parentSlug() {
+        if (!this.form.parent) return '';
+        const p = this.allCategories.find(c => c.id === this.form.parent);
+        return p ? p.slug : '';
+      },
+
+      async init() {
+        this.initPb(this.pbUrl);
+        await this.loadAllCategories();
+
+        if (this.categoryId) {
+          await this.loadCategoryData();
+        }
+      },
+
+      initPb(url) {
+        if (window.PocketBase) {
+          this.pb = new window.PocketBase(url || this.pbUrl);
+          this.pb.autoCancellation(false);
+          this.pb.authStore.loadFromCookie(document.cookie);
+        }
+      },
+
+      async loadAllCategories() {
+        try {
+          if (!this.pb) this.initPb(this.pbUrl);
+          if (!this.pb) return;
+
+          const list = await this.pb.collection('categories').getFullList({
+            sort: 'parent,sort_order,name',
+            $autoCancel: false,
+            requestKey: null
+          });
+          this.allCategories = list;
+        } catch (e) {
+          console.error('Error loading all categories:', e);
+        }
+      },
+
+      async loadCategoryData() {
+        this.loading = true;
+        try {
+          if (!this.pb) this.initPb(this.pbUrl);
+          if (!this.pb) return;
+
+          const record = await this.pb.collection('categories').getOne(this.categoryId, {
+            $autoCancel: false,
+            requestKey: null
+          });
+
+          this.form.name = record.name || '';
+          this.form.slug = record.slug || '';
+          this.form.parent = record.parent || '';
+          this.form.description = record.description || '';
+          this.form.meta_title = record.meta_title || '';
+          this.form.meta_description = record.meta_description || '';
+          this.form.is_active = record.is_active !== undefined ? record.is_active : true;
+          this.form.sort_order = record.sort_order || 0;
+
+          if (record.image) {
+            this.imagePreview = `${this.pbUrl}/api/files/categories/${record.id}/${record.image}`;
+          }
+        } catch (e) {
+          console.error('Error loading category:', e);
+          this.emitToast('Ошибка загрузки данных категории', 'error');
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      onNameInput() {
+        delete this.errors.name;
+        if (!this.isEdit && !this.slugTouched) {
+          this.generateSlug();
+        }
+      },
+
+      generateSlug() {
+        const text = this.form.name || '';
+        const ruMap = {
+          'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+          'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+          'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+          'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+          'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+        };
+
+        let result = text.toLowerCase().split('').map(char => {
+          return ruMap[char] !== undefined ? ruMap[char] : char;
+        }).join('');
+
+        result = result
+          .replace(/[^a-z0-9-_]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
+
+        this.form.slug = result;
+      },
+
+      handleFileInput(event) {
+        const file = event.target.files?.[0];
+        if (file) this.processFile(file);
+        event.target.value = '';
+      },
+
+      handleDrop(event) {
+        this.isDraggingOver = false;
+        const file = event.dataTransfer?.files?.[0];
+        if (file) this.processFile(file);
+      },
+
+      processFile(file) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+          this.emitToast('Разрешены только форматы JPG, PNG, WebP', 'error');
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          this.emitToast('Размер файла не должен превышать 5 МБ', 'error');
+          return;
+        }
+
+        this.imageFile = file;
+        this.isImageDeleted = false;
+        this.imagePreview = URL.createObjectURL(file);
+        this.emitToast('Изображение выбрано', 'info');
+      },
+
+      removeImage() {
+        this.imageFile = null;
+        this.imagePreview = '';
+        this.isImageDeleted = true;
+      },
+
+      async validate() {
+        this.errors = {};
+
+        if (!this.form.name.trim()) {
+          this.errors.name = 'Название категории обязательно';
+        }
+
+        if (!this.form.slug.trim()) {
+          this.errors.slug = 'Slug обязателен';
+        } else if (!/^[a-z0-9-_]+$/i.test(this.form.slug.trim())) {
+          this.errors.slug = 'Slug может содержать только латинские буквы, цифры, дефис и подчеркивание';
+        }
+
+        if (Object.keys(this.errors).length > 0) {
+          return false;
+        }
+
+        // Check slug uniqueness
+        try {
+          if (!this.pb) this.initPb(this.pbUrl);
+          let filter = `slug = "${this.form.slug.trim()}"`;
+          if (this.categoryId) {
+            filter += ` && id != "${this.categoryId}"`;
+          }
+
+          const existing = await this.pb.collection('categories').getList(1, 1, {
+            filter: filter,
+            $autoCancel: false,
+            requestKey: null
+          });
+
+          if (existing.totalItems > 0) {
+            this.errors.slug = 'Категория с таким URL Slug уже существует';
+            return false;
+          }
+        } catch (e) {
+          console.error('Error verifying slug uniqueness:', e);
+        }
+
+        return true;
+      },
+
+      async save(redirectAfter = true) {
+        const isValid = await this.validate();
+        if (!isValid) {
+          this.emitToast('Пожалуйста, исправьте ошибки в форме', 'error');
+          return;
+        }
+
+        this.saving = true;
+        try {
+          if (!this.pb) this.initPb(this.pbUrl);
+
+          const formData = new FormData();
+          formData.append('name', this.form.name.trim());
+          formData.append('slug', this.form.slug.trim());
+          formData.append('parent', this.form.parent || '');
+          formData.append('description', this.form.description.trim());
+          formData.append('meta_title', this.form.meta_title.trim());
+          formData.append('meta_description', this.form.meta_description.trim());
+          formData.append('is_active', String(Boolean(this.form.is_active)));
+          formData.append('sort_order', String(Number(this.form.sort_order) || 0));
+
+          if (this.imageFile) {
+            formData.append('image', this.imageFile);
+          } else if (this.isImageDeleted) {
+            formData.append('image', '');
+          }
+
+          let record;
+          if (this.categoryId) {
+            record = await this.pb.collection('categories').update(this.categoryId, formData);
+            this.emitToast('Категория успешно сохранена', 'success');
+          } else {
+            record = await this.pb.collection('categories').create(formData);
+            this.categoryId = record.id;
+            this.isEdit = true;
+            this.emitToast('Категория успешно создана', 'success');
+            window.history.replaceState(null, '', `/manage/categories/${record.id}`);
+          }
+
+          if (redirectAfter) {
+            setTimeout(() => {
+              window.location.href = '/manage/categories';
+            }, 500);
+          }
+        } catch (e) {
+          console.error('Error saving category:', e);
+          const msg = e?.response?.message || e?.message || 'Не удалось сохранить категорию';
+          this.emitToast(msg, 'error');
+        } finally {
+          this.saving = false;
+        }
+      },
+
+      async deleteCategory() {
+        if (!this.categoryId) return;
+
+        // Check for child subcategories or products
+        try {
+          if (!this.pb) this.initPb(this.pbUrl);
+
+          const subcats = await this.pb.collection('categories').getList(1, 1, {
+            filter: `parent = "${this.categoryId}"`,
+            $autoCancel: false,
+            requestKey: null
+          });
+
+          if (subcats.totalItems > 0) {
+            alert(`Нельзя удалить категорию, так как в ней есть ${subcats.totalItems} подкатегорий. Сначала удалите или переместите подкатегории.`);
+            return;
+          }
+
+          const prods = await this.pb.collection('products').getList(1, 1, {
+            filter: `category = "${this.categoryId}"`,
+            $autoCancel: false,
+            requestKey: null
+          });
+
+          if (prods.totalItems > 0) {
+            if (!confirm(`В этой категории находится ${prods.totalItems} товаров. При удалении категории товары останутся без категории. Вы действительно хотите удалить категорию?`)) {
+              return;
+            }
+          } else {
+            if (!confirm(`Вы действительно хотите удалить категорию "${this.form.name}"?`)) {
+              return;
+            }
+          }
+
+          this.saving = true;
+          await this.pb.collection('categories').delete(this.categoryId);
+          this.emitToast('Категория удалена', 'success');
+          setTimeout(() => {
+            window.location.href = '/manage/categories';
+          }, 500);
+        } catch (e) {
+          console.error('Error deleting category:', e);
+          this.emitToast('Ошибка при удалении категории', 'error');
+          this.saving = false;
+        }
+      },
+
+      emitToast(message, type = 'success') {
+        window.dispatchEvent(new CustomEvent('admin-toast', {
+          detail: { message, type }
+        }));
+      }
+    };
+  };
+</script>

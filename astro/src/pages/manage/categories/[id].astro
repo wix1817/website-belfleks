@@ -1,0 +1,11 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import CategoryForm from '../../../components/admin/categories/CategoryForm.astro';
+
+const { id } = Astro.params;
+export const prerender = false;
+---
+
+<AdminLayout title="Редактирование категории | БелФлекс Админ" activeNav="categories">
+  <CategoryForm categoryId={id} />
+</AdminLayout>
