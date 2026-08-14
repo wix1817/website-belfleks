@@ -1,0 +1,142 @@
+---
+import AdminLayout from '../../layouts/AdminLayout.astro';
+import { requireAuth, createAdminPb } from '../../lib/adminAuth';
+
+const authResult = requireAuth(Astro);
+if (authResult instanceof Response) {
+  return authResult;
+}
+
+const { manager, pb } = authResult;
+
+// Fetch quick stats for dashboard
+let productsCount = 0;
+let categoriesCount = 0;
+let documentsCount = 0;
+
+try {
+  const [prods, cats, docs] = await Promise.all([
+    pb.collection('products').getList(1, 1),
+    pb.collection('categories').getList(1, 1),
+    pb.collection('documents').getList(1, 1),
+  ]);
+  productsCount = prods.totalItems;
+  categoriesCount = cats.totalItems;
+  documentsCount = docs.totalItems;
+} catch (e) {
+  console.error('Error fetching dashboard stats:', e);
+}
+---
+
+<AdminLayout title="Панель управления | БелФлекс" activeNav="dashboard">
+  <!-- Page Header -->
+  <div class="mb-8">
+    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Панель управления</h1>
+    <p class="text-sm text-gray-500 mt-1">Добро пожаловать в административную панель сайта ООО «БелФлекс».</p>
+  </div>
+
+  <!-- Quick Stats Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+    <!-- Products Stat Card -->
+    <a
+      href="/manage/products"
+      class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs hover:border-[#EF1C24]/40 hover:shadow-md transition-all group flex items-center justify-between"
+    >
+      <div>
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Товары в каталоге</span>
+        <div class="text-3xl font-bold text-gray-900 group-hover:text-[#EF1C24] transition-colors">{productsCount}</div>
+        <span class="text-xs text-gray-500 mt-1 block">Активные позиции</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-red-50 text-[#EF1C24] flex items-center justify-center group-hover:bg-[#EF1C24] group-hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
+        </svg>
+      </div>
+    </a>
+
+    <!-- Categories Stat Card -->
+    <a
+      href="/manage/categories"
+      class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs hover:border-[#EF1C24]/40 hover:shadow-md transition-all group flex items-center justify-between"
+    >
+      <div>
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Категории и разделы</span>
+        <div class="text-3xl font-bold text-gray-900 group-hover:text-[#EF1C24] transition-colors">{categoriesCount}</div>
+        <span class="text-xs text-gray-500 mt-1 block">Структура каталога</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
+        </svg>
+      </div>
+    </a>
+
+    <!-- Documents Stat Card -->
+    <a
+      href="/manage/documents"
+      class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs hover:border-[#EF1C24]/40 hover:shadow-md transition-all group flex items-center justify-between"
+    >
+      <div>
+        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">PDF Документы</span>
+        <div class="text-3xl font-bold text-gray-900 group-hover:text-[#EF1C24] transition-colors">{documentsCount}</div>
+        <span class="text-xs text-gray-500 mt-1 block">Каталоги и сертификаты</span>
+      </div>
+      <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-colors">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+        </svg>
+      </div>
+    </a>
+  </div>
+
+  <!-- Manager Info & Quick Actions -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
+      <h2 class="text-lg font-bold text-gray-900 mb-4">Текущая сессия</h2>
+      <div class="space-y-3 text-sm">
+        <div class="flex justify-between py-2 border-b border-gray-100">
+          <span class="text-gray-500">Пользователь:</span>
+          <span class="font-semibold text-gray-800">{manager.name || 'Менеджер'}</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-gray-100">
+          <span class="text-gray-500">Email:</span>
+          <span class="font-mono text-gray-800">{manager.email}</span>
+        </div>
+        <div class="flex justify-between py-2 border-b border-gray-100">
+          <span class="text-gray-500">Роль:</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800 capitalize">
+            {manager.role || 'manager'}
+          </span>
+        </div>
+        <div class="flex justify-between py-2">
+          <span class="text-gray-500">База данных:</span>
+          <span class="text-green-600 font-medium flex items-center gap-1.5 text-xs">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            PocketBase подключен
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs flex flex-col justify-between">
+      <div>
+        <h2 class="text-lg font-bold text-gray-900 mb-2">Быстрый переход</h2>
+        <p class="text-sm text-gray-500 mb-4">Выберите раздел для редактирования контента или просмотра структуры сайта.</p>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <a
+          href="/manage/products"
+          class="py-2.5 px-4 bg-gray-50 hover:bg-[#EF1C24] hover:text-white text-gray-700 rounded-xl text-xs font-semibold transition-colors text-center border border-gray-200"
+        >
+          Управление товарами →
+        </a>
+        <a
+          href="/manage/documents"
+          class="py-2.5 px-4 bg-gray-50 hover:bg-[#EF1C24] hover:text-white text-gray-700 rounded-xl text-xs font-semibold transition-colors text-center border border-gray-200"
+        >
+          Управление документами →
+        </a>
+      </div>
+    </div>
+  </div>
+</AdminLayout>
