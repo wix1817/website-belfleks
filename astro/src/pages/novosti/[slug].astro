@@ -1,0 +1,111 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import SchemaJsonLd from '../../components/seo/SchemaJsonLd.astro';
+import { pb } from '../../lib/pocketbase';
+
+const { slug } = Astro.params;
+const pbUrl = import.meta.env.PUBLIC_PB_URL || 'http://127.0.0.1:8090';
+
+let article: any = null;
+
+try {
+  article = await pb.collection('news').getFirstListItem(
+    `slug="${slug}" && is_published=true`
+  );
+} catch (e) {
+  return Astro.redirect('/novosti');
+}
+
+if (!article) {
+  return Astro.redirect('/novosti');
+}
+
+const title = article.meta_title || `${article.title} | Новости БелФлекс`;
+const description = article.meta_description || article.excerpt || article.title;
+
+const schemaData = {
+  headline: article.title,
+  description: description,
+  image: article.image ? `${pbUrl}/api/files/news/${article.id}/${article.image}` : undefined,
+  datePublished: article.published_date || article.created,
+  dateModified: article.updated,
+  url: Astro.url.href,
+};
+---
+
+<Layout title={title} description={description}>
+  <SchemaJsonLd type="BlogPosting" data={schemaData} />
+  
+  <div class="bg-bg-secondary py-8 border-b border-border">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="flex text-sm text-text-muted mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+          <li class="inline-flex items-center">
+            <a href="/" class="hover:text-primary transition-colors">Главная</a>
+          </li>
+          <li>
+            <div class="flex items-center">
+              <svg class="w-3 h-3 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+              </svg>
+              <a href="/novosti" class="hover:text-primary transition-colors ml-1 md:ml-2">Новости</a>
+            </div>
+          </li>
+          <li>
+            <div class="flex items-center">
+              <svg class="w-3 h-3 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+              </svg>
+              <span class="ml-1 md:ml-2 text-text-primary truncate max-w-[150px] sm:max-w-xs">{article.title}</span>
+            </div>
+          </li>
+        </ol>
+      </nav>
+      
+      {article.published_date && (
+        <time datetime={article.published_date} class="text-sm font-bold text-primary mb-3 block tracking-wider uppercase">
+          {new Date(article.published_date).toLocaleDateString('ru-RU', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+          })}
+        </time>
+      )}
+      
+      <h1 class="text-3xl md:text-4xl lg:text-5xl text-text-primary mb-6 font-bold leading-tight">
+        {article.title}
+      </h1>
+      
+      {article.excerpt && (
+        <p class="text-xl text-text-secondary leading-relaxed border-l-4 border-primary pl-4 mb-8">
+          {article.excerpt}
+        </p>
+      )}
+    </div>
+  </div>
+
+  <article class="py-12 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      {article.image && (
+        <div class="mb-12 rounded-2xl overflow-hidden shadow-lg border border-border">
+          <img 
+            src={`${pbUrl}/api/files/news/${article.id}/${article.image}`}
+            alt={article.title}
+            class="w-full h-auto max-h-[600px] object-cover"
+          />
+        </div>
+      )}
+      
+      <div class="prose prose-lg prose-red max-w-none prose-headings:font-bold prose-headings:text-text-primary prose-a:text-primary hover:prose-a:text-secondary prose-img:rounded-xl">
+        <div set:html={article.content} />
+      </div>
+      
+      <div class="mt-16 pt-8 border-t border-border">
+        <a href="/novosti" class="inline-flex items-center justify-center px-6 py-3 border border-border text-base font-medium rounded-md text-text-primary bg-white hover:bg-bg-secondary transition-colors shadow-sm">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+          Вернуться к новостям
+        </a>
+      </div>
+    </div>
+  </article>
+</Layout>

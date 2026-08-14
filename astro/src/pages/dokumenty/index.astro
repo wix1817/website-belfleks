@@ -1,0 +1,315 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { pb } from '../../lib/pocketbase';
+
+let documents: any[] = [];
+
+try {
+  documents = await pb.collection('documents').getFullList({
+    sort: '-date,title',
+  });
+} catch (e) {
+  console.error("Error fetching documents:", e);
+}
+
+const title = "Документы и сертификаты | ООО БелФлекс";
+const description = "Техническая документация, сертификаты качества, каталоги и условия промывки промышленных рукавов БелФлекс. Таблица химической стойкости.";
+---
+
+<Layout title={title} description={description}>
+  <!-- Hero Banner -->
+  <div class="bg-bg-secondary py-12 border-b border-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="flex text-sm text-text-muted mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+          <li class="inline-flex items-center">
+            <a href="/" class="hover:text-primary transition-colors">Главная</a>
+          </li>
+          <li>
+            <div class="flex items-center">
+              <svg class="w-3 h-3 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+              </svg>
+              <span class="ml-1 md:ml-2 text-text-primary">Документы</span>
+            </div>
+          </li>
+        </ol>
+      </nav>
+      
+      <h1 class="text-3xl md:text-4xl lg:text-5xl text-text-primary mb-4 font-accent font-bold italic">
+        Документы и <span class="text-primary">сертификаты</span>
+      </h1>
+      <p class="text-lg text-text-secondary max-w-3xl">
+        Ознакомьтесь с технической документацией, сертификатами качества и каталогами продукции ООО «БелФлекс».
+      </p>
+    </div>
+  </div>
+
+  <section class="py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Быстрые ссылки по разделам -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+        <!-- Таблица химической стойкости -->
+        <a href="/dokumenty/tablica-khimicheskoy-stoykosti" class="bg-white rounded-xl shadow-sm border border-border p-6 flex flex-col hover:border-primary/50 hover:shadow-md transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">Таблица химстойкости</h3>
+          <p class="text-text-secondary text-xs leading-relaxed mt-auto">Интерактивная проверка совместимости материалов рукавов.</p>
+        </a>
+
+        <!-- Каталоги продукции -->
+        <a href="#katalogi" class="bg-white rounded-xl shadow-sm border border-border p-6 flex flex-col hover:border-primary/50 hover:shadow-md transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center mb-4 group-hover:bg-primary group-hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">Каталоги продукции</h3>
+          <p class="text-text-secondary text-xs leading-relaxed mt-auto">Полные PDF-каталоги по всем видам промышленных рукавов.</p>
+        </a>
+
+        <!-- Сертификаты -->
+        <a href="#sertifikaty" class="bg-white rounded-xl shadow-sm border border-border p-6 flex flex-col hover:border-primary/50 hover:shadow-md transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center mb-4 group-hover:bg-green-600 group-hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">Сертификаты качества</h3>
+          <p class="text-text-secondary text-xs leading-relaxed mt-auto">Технические паспорта и международные сертификаты соответствия.</p>
+        </a>
+
+        <!-- Условия промывки -->
+        <a href="#promyvka" class="bg-white rounded-xl shadow-sm border border-border p-6 flex flex-col hover:border-primary/50 hover:shadow-md transition-all group">
+          <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center mb-4 group-hover:bg-blue-600 group-hover:text-white transition-colors">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-bold text-text-primary mb-2 group-hover:text-primary transition-colors">Условия промывки</h3>
+          <p class="text-text-secondary text-xs leading-relaxed mt-auto">Инструкции по безопасной очистке и стерилизации рукавов.</p>
+        </a>
+      </div>
+
+      <!-- ===== СЕКЦИЯ: КАТАЛОГИ ПРОДУКЦИИ ===== -->
+      <section id="katalogi" class="mb-16 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-text-primary font-accent italic">Каталоги продукции</h2>
+            <p class="text-sm text-text-secondary">Скачайте актуальные брошюры и каталоги в формате PDF</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            {
+              file: '/docs/katalogi/%D0%9A%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3%202026%20%D0%91%D0%B5%D0%BB%D0%A4%D0%BB%D0%B5%D0%BA%D1%81.pdf',
+              name: 'Каталог 2026 БелФлекс',
+              desc: 'Генеральный каталог промышленных рукавов, соединений и хомутов 2026',
+              size: '4.8 МБ'
+            },
+            {
+              file: '/docs/katalogi/%D0%92%D0%BE%D0%B7%D0%B4%D1%83%D1%85%D0%BE%D0%B2%D0%BE%D0%B4%D1%8B%20%D0%BA%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3%20%D0%91%D0%B5%D0%BB%D0%A4%D0%BB%D0%B5%D0%BA%D1%81_compressed.pdf',
+              name: 'Воздуховоды и шланги вентиляции',
+              desc: 'Каталог полиуретановых, термостойких и ПВХ воздуховодов',
+              size: '3.1 МБ'
+            },
+            {
+              file: '/docs/katalogi/%D0%9A%D0%B0%D1%82%D0%B0%D0%BB%D0%BE%D0%B3%20%D1%84%D0%B0%D1%80%D0%BC%D0%B0%D1%86%D0%B5%D0%B2%D1%82%D0%B8%D1%87%D0%B5%D1%81%D0%BA%D0%B8%D0%B9%20%D0%91%D0%B5%D0%BB%D1%84%D0%BB%D0%B5%D0%BA%D1%81.pdf',
+              name: 'Фармацевтический и пищевой каталог',
+              desc: 'Силиконовые, тефлоновые (PTFE) и пищевые рукава FDA / USP Class VI',
+              size: '2.2 МБ'
+            },
+          ].map(item => (
+            <a
+              href={item.file}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group bg-white border border-border rounded-2xl p-6 flex flex-col hover:border-primary/50 hover:shadow-lg transition-all duration-300"
+            >
+              <div class="flex items-start gap-4 mb-4">
+                <div class="flex-shrink-0 w-12 h-14 bg-red-50 border border-red-100 rounded-xl flex flex-col items-center justify-center text-red-500">
+                  <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                  </svg>
+                  <span class="text-[10px] font-bold mt-0.5">PDF</span>
+                </div>
+                <div class="flex-grow min-w-0">
+                  <h4 class="font-bold text-text-primary group-hover:text-primary transition-colors text-base leading-snug">{item.name}</h4>
+                  <span class="inline-block mt-1 text-xs text-text-muted font-medium bg-bg-secondary px-2 py-0.5 rounded">{item.size}</span>
+                </div>
+              </div>
+              <p class="text-xs text-text-secondary leading-relaxed mb-6 flex-grow">{item.desc}</p>
+              <div class="pt-4 border-t border-border flex items-center justify-between text-primary font-accent italic font-bold text-sm uppercase">
+                <span>Скачать PDF</span>
+                <svg class="w-5 h-5 group-hover:translate-y-0.5 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                </svg>
+              </div>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <!-- ===== СЕКЦИЯ: СЕРТИФИКАТЫ КАЧЕСТВА ===== -->
+      <section id="sertifikaty" class="mb-16 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 bg-green-50 rounded-xl flex items-center justify-center text-green-600 flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-text-primary font-accent italic">Сертификаты и паспорта качества</h2>
+            <p class="text-sm text-text-secondary">Документы соответствия европейским и государственным стандартам</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { name: 'Achilles (CONCRETE PUMPING)', desc: 'Рукава для подачи бетона' },
+            { name: 'AGRO (Demetr)', desc: 'Сельскохозяйственные рукава' },
+            { name: 'AGRO КАС', desc: 'Рукава для жидких удобрений КАС' },
+            { name: 'Apollo 20 bar', desc: 'Универсальные напорные рукава' },
+            { name: 'Ares FEP', desc: 'Химостойкие рукава с FEP лайнером' },
+            { name: 'Atlas Supflex', desc: 'Маслобензостойкие рукава' },
+            { name: 'Baku 20 Bar', desc: 'Топливные и нефтяные рукава' },
+            { name: 'Ceres', desc: 'Пищевые напорно-всасывающие рукава' },
+          ].map(item => (
+            <a
+              href={`/docs/sertifikaty/${encodeURIComponent(item.name + '.pdf')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group bg-white border border-border rounded-xl p-4 flex items-center gap-3.5 hover:border-primary/40 hover:shadow-md transition-all"
+            >
+              <div class="flex-shrink-0 w-10 h-12 bg-red-50 border border-red-100 rounded-lg flex flex-col items-center justify-center text-red-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-[9px] font-bold leading-none">PDF</span>
+              </div>
+              <div class="flex-grow min-w-0">
+                <p class="font-bold text-text-primary group-hover:text-primary transition-colors text-xs leading-snug">{item.name}</p>
+                <p class="text-[11px] text-text-muted truncate mt-0.5">{item.desc}</p>
+              </div>
+              <svg class="flex-shrink-0 w-4 h-4 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <!-- ===== СЕКЦИЯ: УСЛОВИЯ ПРОМЫВКИ ===== -->
+      <section id="promyvka" class="mb-16 scroll-mt-24">
+        <div class="flex items-center gap-3 mb-6">
+          <div class="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-600 flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-2xl font-bold text-text-primary font-accent italic">Условия промывки и стерилизации</h2>
+            <p class="text-sm text-text-secondary">Руководства по безопасной дезинфекции и очистке рукавов (CIP/SIP)</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[
+            { name: 'Congo Supflex', desc: 'Режимы очистки для пищевых маслостойких рукавов' },
+            { name: 'Congo', desc: 'Условия паровой и химической стерилизации' },
+            { name: 'Corrugated Bulk SD', desc: 'Промывка абразивостойких рукавов' },
+            { name: 'Cratos', desc: 'Рекомендации по CIP-мойке тяжелых рукавов' },
+            { name: 'Cryos', desc: 'Инструкции для низкотемпературных шлангов' },
+            { name: 'Dhahran SAE 100 R4', desc: 'Регламент очистки гидравлических линий' },
+          ].map(item => (
+            <a
+              href={`/docs/promyvka/${encodeURIComponent(item.name + '.pdf')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              class="group bg-white border border-border rounded-xl p-4 flex items-center gap-3.5 hover:border-primary/40 hover:shadow-md transition-all"
+            >
+              <div class="flex-shrink-0 w-10 h-12 bg-red-50 border border-red-100 rounded-lg flex flex-col items-center justify-center text-red-500">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                </svg>
+                <span class="text-[9px] font-bold leading-none">PDF</span>
+              </div>
+              <div class="flex-grow min-w-0">
+                <p class="font-bold text-text-primary group-hover:text-primary transition-colors text-xs leading-snug">{item.name}</p>
+                <p class="text-[11px] text-text-muted truncate mt-0.5">{item.desc}</p>
+              </div>
+              <svg class="flex-shrink-0 w-4 h-4 text-text-muted group-hover:text-primary group-hover:translate-x-0.5 transition-all" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <!-- ===== СЕКЦИЯ: ТАБЛИЦА ДОКУМЕНТОВ ИЗ POCKETBASE ===== -->
+      {documents.length > 0 && (
+        <section class="mt-16">
+          <div class="mb-6">
+            <h2 class="text-2xl font-bold text-text-primary font-accent italic">Все документы</h2>
+            <p class="text-sm text-text-secondary">Электронный архив документов и сертификатов</p>
+          </div>
+          <div class="bg-white rounded-2xl shadow-sm border border-border overflow-hidden">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-bg-secondary text-text-secondary uppercase text-xs font-semibold">
+                  <tr>
+                    <th scope="col" class="px-6 py-4">Название документа</th>
+                    <th scope="col" class="px-6 py-4">Категория</th>
+                    <th scope="col" class="px-6 py-4">Дата</th>
+                    <th scope="col" class="px-6 py-4 text-right">Действие</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-border">
+                  {documents.map((doc) => (
+                    <tr class="hover:bg-bg-secondary transition-colors">
+                      <td class="px-6 py-4">
+                        <div class="font-semibold text-text-primary">{doc.title}</div>
+                        {doc.description && <div class="text-text-muted mt-1 text-xs">{doc.description}</div>}
+                      </td>
+                      <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          {doc.category || 'Общие'}
+                        </span>
+                      </td>
+                      <td class="px-6 py-4 text-text-muted">
+                        {doc.date ? new Date(doc.date).toLocaleDateString('ru-RU') : '—'}
+                      </td>
+                      <td class="px-6 py-4 text-right">
+                        <a
+                          href={`${import.meta.env.PUBLIC_PB_URL || 'http://127.0.0.1:8090'}/api/files/documents/${doc.id}/${doc.file}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          class="inline-flex items-center justify-center gap-1.5 text-primary hover:text-secondary font-semibold transition-colors text-xs uppercase"
+                        >
+                          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                          </svg>
+                          Скачать
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+      )}
+    </div>
+  </section>
+</Layout>

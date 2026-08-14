@@ -1,0 +1,113 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import SchemaJsonLd from '../../components/seo/SchemaJsonLd.astro';
+import { pb } from '../../lib/pocketbase';
+
+// Fetch active parent categories
+let categories = [];
+try {
+  const result = await pb.collection('categories').getFullList({
+    filter: 'is_active = true && parent = null',
+    sort: 'sort_order,name',
+  });
+  categories = result;
+} catch (e) {
+  console.error("Failed to fetch categories:", e);
+}
+
+const title = "Каталог промышленных рукавов и соединений | ООО БелФлекс";
+const description = "Каталог ООО БелФлекс: промышленные шланги, рукава, соединения Kamlock, хомуты и фитинги. Широкий ассортимент, доставка по всей Беларуси.";
+
+const schemaData = {
+  name: "Каталог продукции БелФлекс",
+  description: description,
+  url: Astro.url.href,
+  itemListElement: categories.map((cat, index) => ({
+    "@type": "ListItem",
+    "position": index + 1,
+    "name": cat.name,
+    "url": new URL(`/katalog/${cat.slug}`, Astro.site || Astro.url.origin).href
+  }))
+};
+---
+
+<Layout title={title} description={description}>
+  <SchemaJsonLd type="ItemList" data={schemaData} />
+  
+  <div class="bg-bg-secondary py-12 border-b border-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="mb-4">
+        <nav class="flex text-sm text-text-muted" aria-label="Breadcrumb">
+          <ol class="inline-flex items-center space-x-1 md:space-x-3">
+            <li class="inline-flex items-center">
+              <a href="/" class="hover:text-primary transition-colors">Главная</a>
+            </li>
+            <li>
+              <div class="flex items-center">
+                <svg class="w-3 h-3 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                  <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+                </svg>
+                <span class="ml-1 md:ml-2 text-text-primary">Каталог</span>
+              </div>
+            </li>
+          </ol>
+        </nav>
+      </div>
+      
+      <h1 class="text-3xl md:text-4xl lg:text-5xl text-text-primary mb-4">
+        Каталог <span class="text-primary">продукции</span>
+      </h1>
+      <p class="text-lg text-text-secondary max-w-3xl">
+        В нашем каталоге представлен широкий ассортимент промышленных рукавов, соединений и комплектующих для любых задач вашего производства.
+      </p>
+    </div>
+  </div>
+
+  <section class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      {categories.length > 0 ? (
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+          {categories.map((category) => (
+            <a href={`/katalog/${category.slug}`} class="group flex flex-col bg-white border border-border rounded-xl overflow-hidden hover:shadow-xl hover:border-primary/30 transition-all duration-300">
+              <div class="relative h-48 bg-bg-secondary flex items-center justify-center overflow-hidden">
+                {category.image ? (
+                  <img 
+                    src={`${import.meta.env.PUBLIC_PB_URL || 'http://127.0.0.1:8090'}/api/files/categories/${category.id}/${category.image}`} 
+                    alt={category.name} 
+                    class="object-cover w-full h-full group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div class="text-primary/20 flex flex-col items-center">
+                    <svg class="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                    <span class="text-sm font-medium">Нет фото</span>
+                  </div>
+                )}
+              </div>
+              <div class="p-6 flex-grow flex flex-col">
+                <h2 class="text-xl font-bold text-text-primary mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                  {category.name}
+                </h2>
+                {category.description && (
+                  <div class="text-sm text-text-secondary line-clamp-3 mt-auto" set:html={category.description} />
+                )}
+                <div class="mt-4 pt-4 border-t border-border flex justify-between items-center text-primary font-medium text-sm">
+                  <span>Перейти</span>
+                  <svg class="w-5 h-5 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-12 bg-bg-secondary rounded-xl border border-border">
+          <svg class="w-16 h-16 mx-auto text-text-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+          <h3 class="text-xl font-medium text-text-primary mb-2">Каталог пуст</h3>
+          <p class="text-text-secondary max-w-md mx-auto">
+            В данный момент категории товаров отсутствуют. Пожалуйста, добавьте их в панели управления.
+          </p>
+        </div>
+      )}
+    </div>
+  </section>
+</Layout>

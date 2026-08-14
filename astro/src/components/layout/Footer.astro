@@ -1,0 +1,132 @@
+---
+interface Props {
+  settings?: Record<string, any> | null;
+}
+const { settings } = Astro.props;
+const currentYear = new Date().getFullYear();
+
+const phone = settings?.phone_main || '+375 (44) 780-00-59';
+const email = settings?.email || 'zakaz@belfleks.by';
+const address = settings?.address || 'г. Гродно, ул. Лидская 15';
+const workingHours = settings?.working_hours || 'Пн–Пт: 8:30 – 17:00';
+const telegramLink = settings?.telegram_link || 'https://t.me/belfleks';
+const viberLink = settings?.viber_link || 'viber://chat?number=%2B375447800059';
+---
+
+<footer class="bg-[#1a1a2e] text-white/80 pt-14 pb-8 mt-auto">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10 mb-10">
+
+      <!-- Brand -->
+      <div class="lg:col-span-1">
+        <a href="/" class="inline-block mb-5" aria-label="БелФлекс">
+          <img src="/logo_full.svg" alt="ООО БелФлекс" class="h-10 w-auto brightness-0 invert opacity-95" />
+        </a>
+        <p class="text-sm text-white/60 leading-relaxed mb-5">
+          Официальный дилер промышленных рукавов, соединительной арматуры и хомутов в Республике Беларусь.
+        </p>
+        <!-- Messengers -->
+        <div class="flex gap-3">
+          <a
+            href={telegramLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Написать нам в Telegram"
+            class="w-10 h-10 bg-white/10 hover:bg-[#2AABEE] text-white rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105"
+            title="Telegram"
+          >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+            </svg>
+          </a>
+
+          <a
+            href={viberLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Написать нам в Viber"
+            class="w-10 h-10 bg-white/10 hover:bg-[#7360f2] text-white rounded-lg flex items-center justify-center transition-all duration-200 hover:scale-105"
+            title="Viber"
+          >
+            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M11.4.002C5.161.082.762 4.57.563 10.8c-.08 2.6.557 5.041 1.882 7.122L.563 24l6.24-1.883c1.961 1.122 4.16 1.722 6.44 1.722h.04c6.281 0 10.717-4.558 10.717-10.8C24 6.762 18.318.04 11.4.002zm.04 19.839h-.04c-2.078 0-4.12-.558-5.879-1.641l-.4-.241-4.159 1.239 1.24-4.039-.28-.4c-1.199-1.72-1.8-3.8-1.8-5.919C.122 3.84 5.282.64 11.44.641c6.281.041 10.761 4.881 10.719 10.96-.001 5.919-4.6 10.24-10.72 10.24z"/>
+              <path d="M17.157 13.883c-.319-.16-1.883-.931-2.175-1.04-.293-.109-.506-.16-.72.16-.212.319-.825.985-.985 1.184-.16.2-.32.213-.64.053-.32-.16-1.35-.499-2.57-1.589-.949-.849-1.59-1.897-1.775-2.217-.186-.32-.02-.493.14-.652.144-.144.32-.373.48-.56.16-.186.213-.32.32-.533.107-.213.054-.4-.027-.56-.08-.16-.719-1.73-.986-2.37-.26-.621-.521-.534-.72-.545-.186-.01-.4-.013-.614-.013-.213 0-.56.08-.853.4-.293.32-1.12 1.094-1.12 2.663 0 1.57 1.147 3.087 1.307 3.3.16.213 2.256 3.447 5.463 4.694.764.33 1.36.527 1.824.676.766.245 1.465.21 2.016.127.615-.093 1.89-.772 2.157-1.519.267-.748.267-1.388.187-1.52-.08-.133-.293-.213-.614-.373z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Разделы -->
+      <div>
+        <h4 class="text-white font-semibold text-sm uppercase tracking-wider mb-5">Разделы сайта</h4>
+        <ul class="space-y-3">
+          <li><a href="/katalog" class="text-white/60 hover:text-white text-sm transition-colors">Каталог рукавов</a></li>
+          <li><a href="/o-kompanii" class="text-white/60 hover:text-white text-sm transition-colors">О компании</a></li>
+          <li><a href="/dokumenty" class="text-white/60 hover:text-white text-sm transition-colors">Документы и каталоги</a></li>
+          <li><a href="/dokumenty/tablica-khimicheskoy-stoykosti" class="text-white/60 hover:text-white text-sm transition-colors">Таблица химстойкости</a></li>
+          <li><a href="/novosti" class="text-white/60 hover:text-white text-sm transition-colors">Новости и статьи</a></li>
+          <li><a href="/kontakty" class="text-white/60 hover:text-white text-sm transition-colors">Контакты</a></li>
+        </ul>
+      </div>
+
+      <!-- Каталог -->
+      <div>
+        <h4 class="text-white font-semibold text-sm uppercase tracking-wider mb-5">Продукция</h4>
+        <ul class="space-y-3">
+          <li><a href="/katalog/pnevmorukava" class="text-white/60 hover:text-white text-sm transition-colors">Пневматические рукава</a></li>
+          <li><a href="/katalog/maslobenzostoykiye" class="text-white/60 hover:text-white text-sm transition-colors">Маслобензостойкие рукава</a></li>
+          <li><a href="/katalog/pishchevye" class="text-white/60 hover:text-white text-sm transition-colors">Пищевые шланги</a></li>
+          <li><a href="/katalog/abrazivostoykiye" class="text-white/60 hover:text-white text-sm transition-colors">Абразивостойкие рукава</a></li>
+          <li><a href="/katalog/kamlock" class="text-white/60 hover:text-white text-sm transition-colors">Быстроразъемные соединения (БРС)</a></li>
+        </ul>
+      </div>
+
+      <!-- Контакты -->
+      <div>
+        <h4 class="text-white font-semibold text-sm uppercase tracking-wider mb-5">Контакты</h4>
+        <address class="not-italic space-y-4 text-sm">
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-0.5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span class="text-white/60">{address}</span>
+          </div>
+          <div class="flex items-center gap-3">
+            <svg class="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+            </svg>
+            <a href={`tel:${phone.replace(/[^\d+]/g, '')}`} class="text-white/60 hover:text-white transition-colors">{phone}</a>
+          </div>
+          <div class="flex items-center gap-3">
+            <svg class="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+            </svg>
+            <a href={`mailto:${email}`} class="text-white/60 hover:text-white transition-colors">{email}</a>
+          </div>
+          <div class="flex items-start gap-3">
+            <svg class="w-4 h-4 mt-0.5 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <span class="text-white/60 whitespace-pre-line">{workingHours}</span>
+          </div>
+        </address>
+      </div>
+    </div>
+
+    <!-- Bottom bar -->
+    <div class="pt-8 border-t border-white/10 flex flex-col sm:flex-row justify-between items-center gap-4">
+      <p class="text-white/40 text-xs">
+        &copy; {currentYear} ООО «БелФлекс». Все права защищены. УНП 591029415.
+      </p>
+      <div class="flex gap-6">
+        <a href="/politika-konfidentsialnosti" class="text-white/40 hover:text-white/70 text-xs transition-colors">
+          Политика конфиденциальности
+        </a>
+        <a href="/sitemap.xml" class="text-white/40 hover:text-white/70 text-xs transition-colors">
+          Карта сайта
+        </a>
+      </div>
+    </div>
+  </div>
+</footer>

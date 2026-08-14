@@ -1,0 +1,28 @@
+services:
+  pocketbase:
+    image: ghcr.io/muchobien/pocketbase:latest
+    restart: unless-stopped
+    volumes:
+      - ./pocketbase/pb_data:/pb/pb_data
+      - ./pocketbase/pb_public:/pb/pb_public
+    ports:
+      - "127.0.0.1:8090:8090"
+    networks:
+      - belflex
+
+  astro:
+    build: ./astro
+    restart: unless-stopped
+    environment:
+      - POCKETBASE_URL=http://pocketbase:8090
+      - NODE_ENV=production
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - pocketbase
+    networks:
+      - belflex
+
+networks:
+  belflex:
+    driver: bridge

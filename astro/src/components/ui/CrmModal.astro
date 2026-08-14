@@ -1,0 +1,100 @@
+---
+// WireCRM Modal Popup Form Component
+const wireCrmFormUrl = "https://forms.wirecrm.com/form-designer/964ec1e8b4373f024adc6e08db1c41e9?embed=1";
+---
+
+<div
+  x-data
+  x-show="$store.crm?.isOpen"
+  x-cloak
+  class="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6"
+  style="display: none;"
+  @keydown.escape.window="$store.crm?.close()"
+>
+  <!-- Backdrop with blur -->
+  <div
+    x-show="$store.crm?.isOpen"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0"
+    x-transition:enter-end="opacity-100"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100"
+    x-transition:leave-end="opacity-0"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm"
+    @click="$store.crm?.close()"
+  ></div>
+
+  <!-- Modal Container -->
+  <div
+    x-show="$store.crm?.isOpen"
+    x-transition:enter="transition ease-out duration-300"
+    x-transition:enter-start="opacity-0 scale-95 translate-y-4"
+    x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-200"
+    x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+    x-transition:leave-end="opacity-0 scale-95 translate-y-4"
+    class="relative bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col z-10 border border-border overflow-hidden"
+    @click.stop
+  >
+    <!-- Modal Header -->
+    <div class="flex items-center justify-between px-5 py-3.5 border-b border-border bg-bg-secondary/60">
+      <div>
+        <h3 class="text-base sm:text-lg font-bold text-text-primary font-accent italic">
+          Оставить <span class="text-primary">заявку</span>
+        </h3>
+        <p class="text-[11px] text-text-muted">Форма обратной связи WireCRM</p>
+      </div>
+
+      <button
+        type="button"
+        @click="$store.crm?.close()"
+        class="p-1.5 text-text-muted hover:text-primary rounded-lg hover:bg-white transition-colors cursor-pointer"
+        aria-label="Закрыть"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Modal Body: WireCRM Form IFrame without scrollbar -->
+    <div class="p-1 sm:p-2 bg-white flex justify-center items-center overflow-hidden">
+      <iframe
+        src={wireCrmFormUrl}
+        width="100%"
+        height="500"
+        frameborder="0"
+        scrolling="no"
+        class="w-full h-[500px] rounded-lg border-0 block"
+        loading="lazy"
+        title="Форма заявки WireCRM"
+      ></iframe>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  function registerCrmStore() {
+    if (window.Alpine) {
+      if (!window.Alpine.store('crm')) {
+        window.Alpine.store('crm', {
+          isOpen: false,
+          open() {
+            this.isOpen = true;
+            document.body.style.overflow = 'hidden';
+          },
+          close() {
+            this.isOpen = false;
+            document.body.style.overflow = '';
+          }
+        });
+      }
+    }
+  }
+
+  if (window.Alpine) {
+    registerCrmStore();
+  } else {
+    document.addEventListener('alpine:init', registerCrmStore);
+  }
+</script>

@@ -1,0 +1,161 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SchemaJsonLd from '../components/seo/SchemaJsonLd.astro';
+import { pb } from '../lib/pocketbase';
+
+let pageData: any = null;
+let manufacturers: any[] = [];
+
+try {
+  const [page, mfrs] = await Promise.all([
+    pb.collection('pages').getFirstListItem('slug="o-kompanii" && is_active=true').catch(() => null),
+    pb.collection('manufacturers').getFullList({
+      filter: 'is_active=true',
+      sort: 'sort_order,name',
+    }).catch(() => []),
+  ]);
+  pageData = page;
+  manufacturers = mfrs;
+} catch (e) {
+  return Astro.redirect('/404');
+}
+
+if (!pageData) {
+  return Astro.redirect('/404');
+}
+
+const pbUrl = import.meta.env.PUBLIC_PB_URL || 'http://127.0.0.1:8090';
+const title = pageData.meta_title || `${pageData.title} | ООО БелФлекс`;
+const description = pageData.meta_description || "О компании БелФлекс — официальный поставщик промышленных рукавов, шлангов и соединений в Беларуси. Собственный склад в Гродно.";
+
+const schemaData = {
+  name: pageData.title,
+  description: description,
+  url: Astro.url.href
+};
+---
+
+<Layout title={title} description={description}>
+  <SchemaJsonLd type="AboutPage" data={schemaData} />
+  
+  <div class="bg-bg-secondary py-12 border-b border-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="flex text-sm text-text-muted mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3">
+          <li class="inline-flex items-center">
+            <a href="/" class="hover:text-primary transition-colors">Главная</a>
+          </li>
+          <li>
+            <div class="flex items-center">
+              <svg class="w-3 h-3 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+              </svg>
+              <span class="ml-1 md:ml-2 text-text-primary">О компании</span>
+            </div>
+          </li>
+        </ol>
+      </nav>
+      
+      <h1 class="text-3xl md:text-4xl lg:text-5xl text-text-primary mb-4 font-accent font-bold italic">
+        {pageData.title}
+      </h1>
+      <p class="text-lg text-text-secondary max-w-3xl">
+        Надежный партнер промышленных предприятий Республики Беларусь в сфере гибких трубопроводов и соединительной арматуры.
+      </p>
+    </div>
+  </div>
+
+  <!-- Основной контент -->
+  <section class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="bg-white rounded-2xl shadow-sm border border-border p-8 md:p-12 prose prose-lg prose-red max-w-none text-text-secondary leading-relaxed">
+        <div set:html={pageData.content} />
+      </div>
+    </div>
+  </section>
+
+  <!-- Ключевые показатели -->
+  <section class="py-12 bg-bg-secondary border-y border-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+        {[
+          { num: '10+', label: 'Лет опыта на рынке РБ' },
+          { num: '500+', label: 'Позиций на складе в Гродно' },
+          { num: '100+', label: 'Постоянных B2B клиентов' },
+          { num: '24 ч', label: 'Оперативная отгрузка' },
+        ].map(s => (
+          <div class="bg-white rounded-2xl p-6 text-center border border-border shadow-sm hover:shadow-md transition-shadow">
+            <p class="text-4xl font-accent italic font-bold text-primary mb-2">{s.num}</p>
+            <p class="text-sm font-medium text-text-secondary">{s.label}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- Реквизиты компании -->
+  <section id="rekvizity" class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="max-w-4xl mx-auto">
+        <div class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center text-primary flex-shrink-0">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+            </svg>
+          </div>
+          <div>
+            <h2 class="text-2xl md:text-3xl font-bold text-text-primary font-accent italic">Реквизиты компании</h2>
+            <p class="text-sm text-text-secondary">Официальные регистрационные и банковские данные</p>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-2xl border border-border shadow-sm overflow-hidden">
+          <dl class="divide-y divide-border">
+            {[
+              ['Полное наименование', 'Общество с ограниченной ответственностью «БелФлекс»'],
+              ['УНП', '591029415'],
+              ['Юридический адрес', '230000, г. Гродно, ул. Лидская, 15'],
+              ['Фактический адрес', '230000, г. Гродно, ул. Лидская, 15'],
+              ['Расчётный счёт', 'BY89ALFA30122588570010270000'],
+              ['Банк', 'ЗАО «Альфа-Банк», г. Минск'],
+              ['БИК', 'ALFABY2X'],
+              ['ОКПО', '374474624000'],
+              ['Директор', 'Шишло Александр Викторович'],
+            ].map(([term, val]) => (
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 px-6 py-4.5 hover:bg-bg-secondary/50 transition-colors">
+                <dt class="text-sm text-text-muted font-medium">{term}</dt>
+                <dd class="sm:col-span-2 text-sm font-semibold text-text-primary">{val}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Наши производители и партнёры -->
+  {manufacturers.length > 0 && (
+    <section class="py-14 bg-bg-secondary border-t border-border">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 class="text-center text-2xl font-bold text-text-primary font-accent italic mb-2">Наши европейские производители</h2>
+        <p class="text-center text-sm text-text-secondary mb-10 max-w-xl mx-auto">Прямые дилерские контракты с ведущими заводами Италии, Германии, Франции и Чехии</p>
+        <div class="flex flex-wrap justify-center items-center gap-8 md:gap-12">
+          {manufacturers.map(mfr => (
+            <div class="grayscale hover:grayscale-0 opacity-60 hover:opacity-100 transition-all duration-300">
+              {mfr.logo ? (
+                <img
+                  src={`${pbUrl}/api/files/manufacturers/${mfr.id}/${mfr.logo}?thumb=160x60`}
+                  alt={mfr.name}
+                  class="h-10 w-auto object-contain"
+                  loading="lazy"
+                />
+              ) : (
+                <span class="text-text-secondary font-bold text-lg">{mfr.name}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+</Layout>

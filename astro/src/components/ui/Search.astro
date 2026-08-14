@@ -1,0 +1,191 @@
+---
+// Instant Live Catalog Search Component
+---
+
+<div
+  x-data="searchComponent()"
+  class="relative w-full"
+  @click.outside="isOpen = false"
+>
+  <!-- Input Container -->
+  <div class="relative flex items-center">
+    <div class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-text-muted">
+      <svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+    </div>
+
+    <input
+      type="text"
+      x-model="query"
+      @input.debounce.250ms="performSearch"
+      @focus="if(query.length >= 2) isOpen = true"
+      @keydown.escape="isOpen = false; query = ''"
+      class="block w-full pl-10 pr-9 py-2.5 bg-bg-secondary/70 hover:bg-bg-secondary focus:bg-white border border-border focus:border-primary rounded-xl text-sm text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+      placeholder="Поиск по названию или коду товара..."
+      autocomplete="off"
+    />
+
+    <!-- Clear button -->
+    <button
+      type="button"
+      x-show="query.length > 0 && !isLoading"
+      @click="query = ''; results = []; isOpen = false"
+      class="absolute inset-y-0 right-0 pr-3 flex items-center text-text-muted hover:text-text-primary cursor-pointer"
+      title="Очистить"
+    >
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+
+    <!-- Loading Spinner -->
+    <div x-show="isLoading" class="absolute inset-y-0 right-0 pr-3 flex items-center">
+      <svg class="animate-spin h-4 w-4 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Search Results Flow (Direct container with generous height & scroll) -->
+  <div
+    x-show="isOpen && query.length >= 2"
+    x-transition:enter="transition ease-out duration-150"
+    x-transition:enter-start="opacity-0 -translate-y-1"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-100"
+    x-transition:leave-start="opacity-100 translate-y-0"
+    x-transition:leave-end="opacity-0 -translate-y-1"
+    class="mt-2.5 w-full bg-white rounded-xl border border-border/80 shadow-lg overflow-hidden"
+    style="display: none;"
+  >
+    <!-- Results Header -->
+    <div class="px-3.5 py-2 bg-bg-secondary/60 border-b border-border/60 flex items-center justify-between text-xs text-text-muted">
+      <span x-text="results.length > 0 ? `Найдено товаров: ${results.length}` : 'Результаты поиска'"></span>
+      <span class="text-[11px]">Нажмите Esc для закрытия</span>
+    </div>
+
+    <!-- Product list with generous scrollable area up to 450px -->
+    <div class="max-h-[380px] sm:max-h-[450px] overflow-y-auto divide-y divide-border/40 overscroll-contain">
+      <template x-if="results.length > 0">
+        <ul role="listbox" class="p-1">
+          <template x-for="product in results" :key="product.id">
+            <li role="option">
+              <a
+                :href="buildProductUrl(product)"
+                class="flex items-center gap-3 p-2.5 hover:bg-bg-secondary/70 rounded-lg transition-colors group"
+              >
+                <!-- Thumbnail -->
+                <div class="w-12 h-12 rounded-lg bg-bg-secondary border border-border/40 flex items-center justify-center flex-shrink-0 overflow-hidden p-1">
+                  <template x-if="product.images && product.images.length > 0">
+                    <img
+                      :src="`${pbUrl}/api/files/${product.collectionId}/${product.id}/${product.images[0]}?thumb=100x100`"
+                      :alt="product.name"
+                      class="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                      loading="lazy"
+                    />
+                  </template>
+                  <template x-if="!product.images || product.images.length === 0">
+                    <svg class="w-6 h-6 text-text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                  </template>
+                </div>
+
+                <!-- Info -->
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-semibold text-text-primary group-hover:text-primary transition-colors line-clamp-1" x-text="product.name"></div>
+                  <div class="text-xs text-text-muted flex items-center gap-1.5 mt-0.5">
+                    <span class="inline-block w-1.5 h-1.5 rounded-full bg-primary/40"></span>
+                    <span class="truncate" x-text="getCategoryName(product)"></span>
+                  </div>
+                </div>
+
+                <!-- Arrow icon -->
+                <div class="text-text-muted group-hover:text-primary transition-colors pr-1">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                  </svg>
+                </div>
+              </a>
+            </li>
+          </template>
+        </ul>
+      </template>
+
+      <!-- Empty State -->
+      <template x-if="results.length === 0 && !isLoading">
+        <div class="px-4 py-8 text-center">
+          <div class="w-10 h-10 rounded-full bg-bg-secondary mx-auto flex items-center justify-center text-text-muted mb-2.5">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </div>
+          <p class="text-sm font-medium text-text-primary">Товары не найдены</p>
+          <p class="text-xs text-text-muted mt-1">По запросу «<span class="font-medium text-text-primary" x-text="query"></span>» ничего не найдено</p>
+        </div>
+      </template>
+    </div>
+  </div>
+</div>
+
+<script is:inline>
+  document.addEventListener('alpine:init', () => {
+    if (!window.Alpine.data('searchComponent')) {
+      Alpine.data('searchComponent', () => ({
+        query: '',
+        results: [],
+        isOpen: false,
+        isLoading: false,
+
+        get pbUrl() {
+          return window.__PB_URL__ || 'http://127.0.0.1:8090';
+        },
+
+        buildProductUrl(product) {
+          const cat = product.expand?.category;
+          const catParent = cat?.expand?.parent;
+          if (catParent) {
+            return `/katalog/${catParent.slug}/${cat.slug}/${product.slug}`;
+          } else if (cat) {
+            return `/katalog/${cat.slug}/${product.slug}`;
+          }
+          return `/katalog/${product.slug}`;
+        },
+
+        getCategoryName(product) {
+          const cat = product.expand?.category;
+          const catParent = cat?.expand?.parent;
+          if (catParent) return `${catParent.name} / ${cat.name}`;
+          return cat?.name || 'Промышленные рукава';
+        },
+
+        async performSearch() {
+          const trimmed = this.query.trim();
+          if (trimmed.length < 2) {
+            this.results = [];
+            this.isOpen = false;
+            return;
+          }
+
+          this.isLoading = true;
+          this.isOpen = true;
+
+          try {
+            const q = encodeURIComponent(trimmed);
+            const res = await fetch(`/api/search.json?q=${q}`);
+            if (!res.ok) throw new Error('Search failed');
+            const data = await res.json();
+            this.results = data.items || [];
+          } catch (e) {
+            console.error('Search fetch error:', e);
+            this.results = [];
+          } finally {
+            this.isLoading = false;
+          }
+        }
+      }));
+    }
+  });
+</script>

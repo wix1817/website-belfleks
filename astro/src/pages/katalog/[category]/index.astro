@@ -1,0 +1,172 @@
+---
+import Layout from '../../../layouts/Layout.astro';
+import SchemaJsonLd from '../../../components/seo/SchemaJsonLd.astro';
+import { pb } from '../../../lib/pocketbase';
+
+const { category } = Astro.params;
+const pbUrl = import.meta.env.PUBLIC_PB_URL || 'http://127.0.0.1:8090';
+
+let categoryData: any = null;
+let products: any[] = [];
+let subcategories: any[] = [];
+
+try {
+  // Fetch the current category
+  categoryData = await pb.collection('categories').getFirstListItem(`slug="${category}" && is_active=true`);
+  
+  if (categoryData) {
+    // Fetch products in this category
+    products = await pb.collection('products').getFullList({
+      filter: `category="${categoryData.id}" && is_active=true`,
+      sort: 'sort_order,name',
+    });
+    
+    // Fetch subcategories if any
+    subcategories = await pb.collection('categories').getFullList({
+      filter: `parent="${categoryData.id}" && is_active=true`,
+      sort: 'sort_order,name',
+    });
+  }
+} catch (e) {
+  return Astro.redirect('/katalog');
+}
+
+if (!categoryData) {
+  return Astro.redirect('/katalog');
+}
+
+const title = categoryData.meta_title || `${categoryData.name} — купить в Гродно | БелФлекс`;
+const description = categoryData.meta_description || `Каталог БелФлекс: ${categoryData.name}. Официальный дилер промышленных рукавов в Беларуси. Запросить КП.`;
+
+const schemaData = {
+  name: categoryData.name,
+  description: description,
+  url: Astro.url.href,
+  itemListElement: products.map((prod, index) => ({
+    "@type": "ListItem",
+    "position": index + 1,
+    "name": prod.name,
+    "url": new URL(`/katalog/${category}/${prod.slug}`, Astro.site || Astro.url.origin).href
+  }))
+};
+---
+
+<Layout title={title} description={description}>
+  <SchemaJsonLd type="ItemList" data={schemaData} />
+  
+  <div class="bg-bg-secondary py-8 border-b border-border">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <nav class="flex text-sm text-text-muted mb-6" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-1 md:space-x-3 flex-wrap">
+          <li class="inline-flex items-center">
+            <a href="/" class="hover:text-primary transition-colors">Главная</a>
+          </li>
+          <li>
+            <div class="flex items-center">
+              <svg class="w-3 h-3 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+              </svg>
+              <a href="/katalog" class="hover:text-primary transition-colors ml-1 md:ml-2">Каталог</a>
+            </div>
+          </li>
+          <li>
+            <div class="flex items-center">
+              <svg class="w-3 h-3 mx-1" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 6 10">
+                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="m1 9 4-4-4-4"/>
+              </svg>
+              <span class="ml-1 md:ml-2 text-text-primary" aria-current="page">{categoryData.name}</span>
+            </div>
+          </li>
+        </ol>
+      </nav>
+      
+      <div class="flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div class="max-w-3xl">
+          <h1 class="text-3xl md:text-4xl lg:text-5xl font-accent font-bold italic text-text-primary mb-4">{categoryData.name}</h1>
+          {categoryData.description && (
+            <div class="text-text-secondary prose prose-sm max-w-none" set:html={categoryData.description} />
+          )}
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="py-12">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      {/* Subcategories (if any) */}
+      {subcategories.length > 0 && (
+        <div class="mb-12">
+          <h2 class="text-xl font-bold mb-6">Подкатегории</h2>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {subcategories.map((sub: any) => (
+              <a href={`/katalog/${category}/${sub.slug}`} class="bg-white border border-border p-6 rounded-xl hover:border-primary/40 hover:shadow-md transition-all flex items-center justify-between group">
+                <div>
+                  <span class="font-semibold text-text-primary group-hover:text-primary transition-colors block">{sub.name}</span>
+                  {sub.description && <span class="text-sm text-text-muted mt-0.5 block line-clamp-1">{sub.description}</span>}
+                </div>
+                <svg class="w-5 h-5 text-text-muted group-hover:text-primary transition-colors flex-shrink-0 ml-3 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Products List */}
+      <h2 class="text-xl font-bold mb-6">Товары в категории</h2>
+      
+      {products.length > 0 ? (
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+          {products.map(product => (
+            <a href={`/katalog/${category}/${product.slug}`} class="group bg-white border border-border rounded-xl overflow-hidden hover:shadow-xl hover:border-primary/30 transition-all duration-300 flex flex-col">
+              <div class="relative h-48 bg-white p-4 flex items-center justify-center border-b border-border">
+                {product.images && product.images.length > 0 ? (
+                  <img 
+                    src={`${pbUrl}/api/files/products/${product.id}/${product.images[0]}?thumb=400x300`} 
+                    alt={product.name} 
+                    class="object-contain w-full h-full group-hover:scale-105 transition-transform duration-500"
+                  />
+                ) : (
+                  <div class="text-primary/20 flex flex-col items-center">
+                    <svg class="w-12 h-12 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                  </div>
+                )}
+                
+                {product.is_featured && (
+                  <span class="absolute top-3 left-3 bg-secondary text-white text-xs font-bold px-2 py-1 rounded uppercase tracking-wider">Хит продаж</span>
+                )}
+              </div>
+              <div class="p-5 flex-grow flex flex-col">
+                <h3 class="text-lg font-bold text-text-primary mb-2 group-hover:text-primary transition-colors line-clamp-2">
+                  {product.name}
+                </h3>
+                {product.short_description && (
+                  <p class="text-sm text-text-secondary line-clamp-2 mb-4 flex-grow">
+                    {product.short_description}
+                  </p>
+                )}
+                <div class="mt-auto pt-4 border-t border-border flex justify-between items-center">
+                  <span class="text-primary font-accent italic font-bold text-sm uppercase">Подробнее</span>
+                  <svg class="w-5 h-5 text-primary transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                </div>
+              </div>
+            </a>
+          ))}
+        </div>
+      ) : (
+        <div class="text-center py-12 bg-bg-secondary rounded-xl border border-border">
+          <svg class="w-16 h-16 mx-auto text-text-muted mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+          <h3 class="text-xl font-medium text-text-primary mb-2">В этой категории пока нет товаров</h3>
+          <p class="text-text-secondary max-w-md mx-auto">
+            Свяжитесь с нами, чтобы узнать о наличии необходимых вам промышленных рукавов и соединений.
+          </p>
+          <div class="mt-6">
+            <a href="/kontakty" class="inline-flex bg-primary hover:bg-secondary text-white font-bold py-2.5 px-6 rounded transition-colors uppercase text-sm tracking-wide">
+              Связаться с нами
+            </a>
+          </div>
+        </div>
+      )}
+    </div>
+  </section>
+</Layout>

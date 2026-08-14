@@ -1,0 +1,227 @@
+---
+import Search from '../ui/Search.astro';
+---
+
+<header
+  class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border/80 shadow-xs transition-all duration-200"
+  x-data="{ mobileMenuOpen: false, searchOpen: false }"
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-20 gap-2 lg:gap-4 xl:gap-6">
+
+      <!-- Logo -->
+      <div class="flex-shrink-0 flex items-center">
+        <a href="/" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg p-0.5" aria-label="ООО БелФлекс — на главную">
+          <!-- Desktop: scaled gracefully from 1024px to 1440px+ -->
+          <img
+            src="/logo_full.svg"
+            alt="ООО БелФлекс"
+            class="hidden lg:block h-11 xl:h-12 w-auto object-contain transition-transform duration-200 hover:scale-[1.01]"
+          />
+          <!-- Tablet / Mobile -->
+          <img
+            src="/logo_full.svg"
+            alt="ООО БелФлекс"
+            class="lg:hidden h-9 sm:h-10 w-auto object-contain"
+          />
+        </a>
+      </div>
+
+      <!-- Desktop Navigation -->
+      <nav class="hidden lg:flex items-center gap-3 xl:gap-6 2xl:gap-8 mx-auto" aria-label="Основная навигация">
+        <a
+          href="/katalog"
+          class="text-text-primary hover:text-primary font-medium text-sm xl:text-[15px] py-2 px-1 rounded-md transition-colors whitespace-nowrap"
+        >
+          Каталог
+        </a>
+        <a
+          href="/o-kompanii"
+          class="text-text-primary hover:text-primary font-medium text-sm xl:text-[15px] py-2 px-1 rounded-md transition-colors whitespace-nowrap"
+        >
+          О компании
+        </a>
+        <a
+          href="/novosti"
+          class="text-text-primary hover:text-primary font-medium text-sm xl:text-[15px] py-2 px-1 rounded-md transition-colors whitespace-nowrap"
+        >
+          Новости
+        </a>
+        <a
+          href="/dokumenty"
+          class="text-text-primary hover:text-primary font-medium text-sm xl:text-[15px] py-2 px-1 rounded-md transition-colors whitespace-nowrap"
+        >
+          Документы
+        </a>
+        <a
+          href="/kontakty"
+          class="text-text-primary hover:text-primary font-medium text-sm xl:text-[15px] py-2 px-1 rounded-md transition-colors whitespace-nowrap"
+        >
+          Контакты
+        </a>
+      </nav>
+
+      <!-- Desktop Actions: Search + Phone + CTA -->
+      <div class="hidden lg:flex items-center gap-2.5 xl:gap-4 flex-shrink-0">
+        <!-- Search Trigger & Dropdown -->
+        <div class="relative" @click.outside="searchOpen = false">
+          <button
+            @click="searchOpen = !searchOpen"
+            class="p-2 text-text-secondary hover:text-primary hover:bg-bg-secondary rounded-lg transition-colors cursor-pointer"
+            aria-label="Поиск по каталогу"
+            :class="{ 'text-primary bg-bg-secondary': searchOpen }"
+          >
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+          </button>
+          
+          <div
+            x-show="searchOpen"
+            x-transition:enter="transition ease-out duration-200"
+            x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            x-transition:leave="transition ease-in duration-150"
+            x-transition:leave-start="opacity-100 scale-100 translate-y-0"
+            x-transition:leave-end="opacity-0 scale-95 -translate-y-1"
+            class="absolute right-0 top-full mt-2 w-88 sm:w-[460px] z-50 bg-white rounded-2xl shadow-2xl border border-border p-3"
+            style="display: none;"
+          >
+            <Search />
+          </div>
+        </div>
+
+        <!-- Phone link with subtle icon -->
+        <a
+          href="tel:+375447800059"
+          class="flex items-center gap-1.5 text-text-primary font-semibold hover:text-primary transition-colors text-xs xl:text-sm tracking-wide whitespace-nowrap py-1.5 px-2 rounded-lg hover:bg-bg-secondary/60"
+        >
+          <svg class="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+          </svg>
+          <span>+375 (44) 780-00-59</span>
+        </a>
+
+        <!-- Primary CTA Button -->
+        <button
+          type="button"
+          data-crm-open="true"
+          @click="$store.crm?.open()"
+          onclick="window.openCrmModal && window.openCrmModal()"
+          class="crm-trigger inline-flex items-center justify-center bg-primary hover:bg-secondary text-white font-accent italic font-bold py-3 px-6 xl:px-7 rounded-lg transition-all uppercase text-sm tracking-wide shadow-md hover:shadow-lg whitespace-nowrap cursor-pointer hover:scale-[1.02] active:scale-[0.98]"
+        >
+          Оставить заявку
+        </button>
+      </div>
+
+      <!-- Mobile: Phone Button + Burger -->
+      <div class="flex items-center gap-2 ml-auto lg:hidden">
+        <a
+          href="tel:+375447800059"
+          class="p-2 text-text-secondary hover:text-primary hover:bg-bg-secondary rounded-lg transition-colors"
+          aria-label="Позвонить"
+        >
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+          </svg>
+        </a>
+        <button
+          type="button"
+          @click="mobileMenuOpen = !mobileMenuOpen"
+          class="p-2 text-text-secondary hover:text-primary hover:bg-bg-secondary rounded-lg transition-colors cursor-pointer"
+          aria-label="Открыть мобильное меню"
+          :aria-expanded="mobileMenuOpen"
+        >
+          <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24" x-show="!mobileMenuOpen">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+          <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24" x-show="mobileMenuOpen" style="display: none;">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile Drawer Menu -->
+  <div
+    class="lg:hidden"
+    x-show="mobileMenuOpen"
+    x-transition:enter="transition ease-out duration-200"
+    x-transition:enter-start="opacity-0 -translate-y-2"
+    x-transition:enter-end="opacity-100 translate-y-0"
+    x-transition:leave="transition ease-in duration-150"
+    x-transition:leave-start="opacity-100 translate-y-0"
+    x-transition:leave-end="opacity-0 -translate-y-2"
+    style="display: none;"
+  >
+    <div class="border-t border-border bg-white shadow-xl">
+      <!-- Search inside mobile menu -->
+      <div class="px-4 py-3 border-b border-border bg-bg-secondary/40">
+        <Search />
+      </div>
+
+      <!-- Nav links -->
+      <nav class="px-3 py-3 space-y-1" aria-label="Мобильная навигация">
+        <a href="/katalog" @click="mobileMenuOpen = false"
+          class="flex items-center px-3 py-2.5 text-base font-medium text-text-primary hover:text-primary hover:bg-bg-secondary rounded-lg transition-colors">
+          <svg class="w-5 h-5 mr-3 text-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+          </svg>
+          Каталог
+        </a>
+        <a href="/o-kompanii" @click="mobileMenuOpen = false"
+          class="flex items-center px-3 py-2.5 text-base font-medium text-text-primary hover:text-primary hover:bg-bg-secondary rounded-lg transition-colors">
+          <svg class="w-5 h-5 mr-3 text-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+          </svg>
+          О компании
+        </a>
+        <a href="/novosti" @click="mobileMenuOpen = false"
+          class="flex items-center px-3 py-2.5 text-base font-medium text-text-primary hover:text-primary hover:bg-bg-secondary rounded-lg transition-colors">
+          <svg class="w-5 h-5 mr-3 text-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z"/>
+          </svg>
+          Новости
+        </a>
+        <a href="/dokumenty" @click="mobileMenuOpen = false"
+          class="flex items-center px-3 py-2.5 text-base font-medium text-text-primary hover:text-primary hover:bg-bg-secondary rounded-lg transition-colors">
+          <svg class="w-5 h-5 mr-3 text-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          Документы
+        </a>
+        <a href="/kontakty" @click="mobileMenuOpen = false"
+          class="flex items-center px-3 py-2.5 text-base font-medium text-text-primary hover:text-primary hover:bg-bg-secondary rounded-lg transition-colors">
+          <svg class="w-5 h-5 mr-3 text-primary/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+          </svg>
+          Контакты
+        </a>
+      </nav>
+
+      <!-- Mobile CTA & Phone -->
+      <div class="p-4 border-t border-border space-y-3 bg-bg-secondary/20">
+        <button
+          type="button"
+          data-crm-open="true"
+          @click="$store.crm?.open(); mobileMenuOpen = false"
+          onclick="window.openCrmModal && window.openCrmModal()"
+          class="crm-trigger w-full bg-primary hover:bg-secondary text-white font-accent italic font-bold py-3 px-5 rounded-lg transition-colors uppercase text-sm tracking-wide text-center shadow-md cursor-pointer"
+        >
+          Оставить заявку
+        </button>
+        <a
+          href="tel:+375447800059"
+          class="flex items-center justify-center gap-2 w-full py-2.5 text-text-primary font-semibold text-sm rounded-lg hover:bg-bg-secondary transition-colors"
+        >
+          <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+          </svg>
+          +375 (44) 780-00-59
+        </a>
+      </div>
+    </div>
+  </div>
+</header>
