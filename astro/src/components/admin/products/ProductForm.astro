@@ -496,7 +496,219 @@ const isEdit = Boolean(productId);
       </div>
     </div>
 
-    <!-- SECTION 4: ОПИСАНИЕ -->
+    <!-- SECTION 4: ТАБЛИЦА ДИАМЕТРОВ (Visual Table Editor & Excel Import/Export) -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
+        <div>
+          <h2 class="text-base font-bold text-gray-900 font-sans flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            Таблица типоразмеров и диаметров
+          </h2>
+          <p class="text-xs text-text-secondary mt-0.5">
+            Технические характеристики по диаметрам (рукавов, фитингов и соединений).
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="text-xs text-text-secondary font-mono px-2 py-1 bg-gray-100 rounded" x-text="tableRows.length + ' строк × ' + tableColumns.length + ' кол.'"></span>
+        </div>
+      </div>
+
+      <!-- Table Toolbar -->
+      <div class="flex flex-wrap items-center justify-between gap-2.5 my-4 p-3 bg-[#F7FAFC] rounded-[8px] border border-border">
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Add Row Button -->
+          <button
+            type="button"
+            @click="addTableRow()"
+            class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-[6px] bg-[#EF1C24] hover:bg-[#d91920] text-white text-xs font-semibold font-sans transition-colors cursor-pointer shadow-2xs"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            + Строка
+          </button>
+
+          <!-- Add Column Button -->
+          <button
+            type="button"
+            @click="openAddColumnModal()"
+            class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-[6px] bg-white border border-border hover:border-primary text-gray-800 hover:text-primary text-xs font-semibold font-sans transition-colors cursor-pointer shadow-2xs"
+          >
+            <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+            </svg>
+            + Колонка
+          </button>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <!-- Import from Excel -->
+          <button
+            type="button"
+            @click="excelModalOpen = true"
+            class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-[6px] bg-white border border-border hover:border-green-600 text-gray-700 hover:text-green-700 text-xs font-medium font-sans transition-colors cursor-pointer shadow-2xs"
+            title="Вставить скопированную таблицу из Excel"
+          >
+            <svg class="w-3.5 h-3.5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+            </svg>
+            Вставить из Excel
+          </button>
+
+          <!-- Export to Excel -->
+          <button
+            type="button"
+            @click="exportToExcel()"
+            :disabled="tableRows.length === 0"
+            class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-[6px] bg-white border border-border hover:border-blue-600 text-gray-700 hover:text-blue-700 text-xs font-medium font-sans transition-colors cursor-pointer shadow-2xs disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Скопировать таблицу в буфер для вставки в Excel"
+          >
+            <svg class="w-3.5 h-3.5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"/>
+            </svg>
+            Скопировать для Excel
+          </button>
+
+          <!-- Reset Default Columns -->
+          <button
+            type="button"
+            @click="resetToDefaultColumns()"
+            class="py-1.5 px-2.5 text-xs text-gray-500 hover:text-primary transition-colors cursor-pointer"
+            title="Сбросить структуру таблицы к 7 стандартным колонкам"
+          >
+            Сброс к стандарту
+          </button>
+        </div>
+      </div>
+
+      <!-- Main Data Table -->
+      <div class="border border-[#EDF2F7] rounded-[8px] overflow-hidden bg-white">
+        <div class="overflow-x-auto max-h-[520px]">
+          <table class="w-full text-left text-xs font-sans border-collapse">
+            <!-- Sticky Header -->
+            <thead class="sticky top-0 bg-[#F7FAFC] text-gray-700 border-b border-[#EDF2F7] z-10 shadow-2xs">
+              <tr>
+                <th scope="col" class="w-10 px-2.5 py-3 text-center text-gray-400 font-mono">#</th>
+                <template x-for="(col, cIdx) in tableColumns" :key="col.id">
+                  <th scope="col" class="px-3 py-2.5 min-w-[130px] border-r border-border/60">
+                    <div class="flex items-center justify-between gap-1 group">
+                      <!-- Column label input -->
+                      <input
+                        type="text"
+                        x-model="col.label"
+                        @change="updateColumnKey(col)"
+                        class="w-full bg-transparent hover:bg-white focus:bg-white focus:outline-none focus:ring-1 focus:ring-primary rounded px-1.5 py-1 text-xs font-bold text-gray-900 transition-colors"
+                        title="Нажмите для переименования колонки"
+                      />
+                      
+                      <!-- Column controls -->
+                      <div class="flex items-center gap-0.5 opacity-40 group-hover:opacity-100 transition-opacity">
+                        <!-- Move left -->
+                        <button
+                          type="button"
+                          x-show="cIdx > 0"
+                          @click="moveColumn(cIdx, -1)"
+                          class="p-0.5 text-gray-400 hover:text-gray-700 rounded cursor-pointer"
+                          title="Переместить колонку влево"
+                        >
+                          ‹
+                        </button>
+                        <!-- Move right -->
+                        <button
+                          type="button"
+                          x-show="cIdx < tableColumns.length - 1"
+                          @click="moveColumn(cIdx, 1)"
+                          class="p-0.5 text-gray-400 hover:text-gray-700 rounded cursor-pointer"
+                          title="Переместить колонку вправо"
+                        >
+                          ›
+                        </button>
+                        <!-- Delete column -->
+                        <button
+                          type="button"
+                          @click="deleteColumn(cIdx)"
+                          class="p-0.5 text-gray-400 hover:text-[#EF1C24] rounded cursor-pointer ml-0.5"
+                          title="Удалить колонку"
+                        >
+                          ×
+                        </button>
+                      </div>
+                    </div>
+                  </th>
+                </template>
+                <th scope="col" class="w-24 px-3 py-2.5 text-right text-gray-500 font-semibold pr-4">Действия</th>
+              </tr>
+            </thead>
+
+            <!-- Table Rows -->
+            <tbody class="divide-y divide-border">
+              <template x-for="(row, rIdx) in tableRows" :key="row.id">
+                <tr class="odd:bg-[#F7FAFC] even:bg-white hover:bg-red-50/15 transition-colors">
+                  <!-- Row Number -->
+                  <td class="px-2.5 py-2 text-center text-gray-400 font-mono text-[11px]" x-text="rIdx + 1"></td>
+
+                  <!-- Cell Inputs -->
+                  <template x-for="col in tableColumns" :key="col.id">
+                    <td class="px-1 py-1 border-r border-border/40">
+                      <input
+                        type="text"
+                        x-model="row[col.key]"
+                        placeholder="—"
+                        class="w-full bg-transparent focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#EF1C24] rounded-[4px] py-1.5 px-2 text-xs sm:text-sm text-gray-900 placeholder-gray-300 transition-colors"
+                      />
+                    </td>
+                  </template>
+
+                  <!-- Row Actions (Duplicate, Delete) -->
+                  <td class="px-3 py-1 text-right pr-4">
+                    <div class="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        @click="duplicateRow(rIdx)"
+                        class="p-1.5 text-gray-400 hover:text-primary hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                        title="Дублировать строку"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        @click="deleteRow(rIdx)"
+                        class="p-1.5 text-gray-400 hover:text-[#EF1C24] hover:bg-red-50 rounded transition-colors cursor-pointer"
+                        title="Удалить строку"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                        </svg>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Empty State -->
+        <div
+          x-show="tableRows.length === 0"
+          class="p-8 text-center text-gray-400 text-xs"
+        >
+          <p>В таблице нет строк данных.</p>
+          <button
+            type="button"
+            @click="addTableRow()"
+            class="mt-2 text-primary font-semibold hover:underline cursor-pointer"
+          >
+            + Добавить первую строку
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 5: ОПИСАНИЕ -->
     <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
       <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-blue-500"></span>
@@ -613,7 +825,7 @@ const isEdit = Boolean(productId);
       </div>
     </div>
 
-    <!-- SECTION 5: НАСТРОЙКИ -->
+    <!-- SECTION 6: НАСТРОЙКИ -->
     <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
       <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -686,6 +898,126 @@ const isEdit = Boolean(productId);
       </div>
     </div>
   </div>
+
+  <!-- MODAL: Import from Excel -->
+  <div
+    x-show="excelModalOpen"
+    x-cloak
+    class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+    @keydown.escape.window="excelModalOpen = false"
+  >
+    <div
+      class="bg-white rounded-[10px] max-w-2xl w-full p-6 shadow-2xl border border-border space-y-4"
+      @click.stop
+    >
+      <div class="flex items-center justify-between pb-3 border-b border-border">
+        <h3 class="text-base font-bold text-gray-900 font-sans flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-green-500"></span>
+          Импорт таблицы из Excel / Google Таблиц
+        </h3>
+        <button
+          type="button"
+          @click="excelModalOpen = false"
+          class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer"
+        >
+          ×
+        </button>
+      </div>
+
+      <p class="text-xs text-text-secondary">
+        Выделите ячейки в Excel или Google Таблицах, скопируйте (Ctrl+C) и вставьте в поле ниже (Ctrl+V). Первая строка будет использована как заголовки колонок.
+      </p>
+
+      <textarea
+        rows="8"
+        x-model="excelRawText"
+        placeholder="Вставьте таблицу сюда...&#10;Диаметр, мм	Наружный диаметр, мм	Рабочее давление, бар&#10;25	34	10&#10;32	42	10"
+        class="w-full bg-[#F7FAFC] border border-border focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] p-3 text-xs font-mono text-gray-900 transition-all"
+      ></textarea>
+
+      <!-- Excel Preview Stats -->
+      <template x-if="excelParsedSummary">
+        <div class="p-3 bg-green-50 rounded-[6px] border border-green-200 text-xs text-green-800 flex items-center gap-2">
+          <svg class="w-4 h-4 text-green-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+          </svg>
+          <span x-text="excelParsedSummary"></span>
+        </div>
+      </template>
+
+      <div class="flex items-center justify-end gap-2.5 pt-2">
+        <button
+          type="button"
+          @click="excelModalOpen = false; excelRawText = ''"
+          class="py-2 px-4 rounded-[6px] border border-border bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold cursor-pointer"
+        >
+          Отмена
+        </button>
+        <button
+          type="button"
+          @click="applyExcelImport()"
+          :disabled="!excelRawText.trim()"
+          class="py-2 px-5 rounded-[6px] bg-green-600 hover:bg-green-700 text-white text-xs font-semibold cursor-pointer shadow-xs disabled:opacity-50"
+        >
+          Импортировать
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: Add Column -->
+  <div
+    x-show="addColModalOpen"
+    x-cloak
+    class="fixed inset-0 z-50 overflow-y-auto bg-black/60 backdrop-blur-xs flex items-center justify-center p-4"
+    @keydown.escape.window="addColModalOpen = false"
+  >
+    <div
+      class="bg-white rounded-[10px] max-w-md w-full p-6 shadow-2xl border border-border space-y-4"
+      @click.stop
+    >
+      <div class="flex items-center justify-between pb-2 border-b border-border">
+        <h3 class="text-sm font-bold text-gray-900 font-sans">Добавление колонки</h3>
+        <button
+          type="button"
+          @click="addColModalOpen = false"
+          class="text-gray-400 hover:text-gray-600 text-lg cursor-pointer"
+        >
+          ×
+        </button>
+      </div>
+
+      <div>
+        <label class="block text-xs font-medium text-gray-700 mb-1">
+          Название колонки
+        </label>
+        <input
+          type="text"
+          x-model="newColLabel"
+          @keydown.enter.prevent="confirmAddColumn()"
+          placeholder="например: Вакуум, бар"
+          class="w-full bg-[#F7FAFC] border border-border focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[6px] py-2 px-3 text-xs sm:text-sm text-gray-900"
+        />
+      </div>
+
+      <div class="flex items-center justify-end gap-2 pt-2">
+        <button
+          type="button"
+          @click="addColModalOpen = false; newColLabel = ''"
+          class="py-1.5 px-3 rounded-[6px] border border-border bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold cursor-pointer"
+        >
+          Отмена
+        </button>
+        <button
+          type="button"
+          @click="confirmAddColumn()"
+          class="py-1.5 px-4 rounded-[6px] bg-[#EF1C24] hover:bg-[#d91920] text-white text-xs font-semibold cursor-pointer shadow-xs"
+        >
+          Добавить
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- Global Product Form Alpine Script -->
@@ -703,9 +1035,17 @@ const isEdit = Boolean(productId);
       errors: {},
       images: [], // array of { id, name, file, previewUrl, isExisting, rawFileName, fullUrl }
       specifications: [], // array of { id, label, value }
+      tableColumns: [], // array of { id, label, key }
+      tableRows: [], // array of { id, [colKey]: string }
       isDraggingOver: false,
       draggedCardIndex: null,
       draggedSpecIndex: null,
+
+      // Modals
+      excelModalOpen: false,
+      excelRawText: '',
+      addColModalOpen: false,
+      newColLabel: '',
 
       form: {
         name: '',
@@ -719,12 +1059,24 @@ const isEdit = Boolean(productId);
         sort_order: 0,
       },
 
+      defaultColumnsList: [
+        { label: 'Диаметр, мм', key: 'diameter_mm' },
+        { label: 'Наружный диаметр, мм', key: 'outer_diameter_mm' },
+        { label: 'Рабочее давление, бар', key: 'working_pressure_bar' },
+        { label: 'Разрывное давление, бар', key: 'burst_pressure_bar' },
+        { label: 'Радиус изгиба, мм', key: 'bend_radius_mm' },
+        { label: 'Длина бухты, м', key: 'coil_length_m' },
+        { label: 'Вес, г/м', key: 'weight_g_m' }
+      ],
+
       async init() {
         this.initPb(pbUrl);
         await this.loadCategories();
 
         if (this.productId) {
           await this.loadProductData();
+        } else {
+          this.resetToDefaultColumns();
         }
       },
 
@@ -808,6 +1160,13 @@ const isEdit = Boolean(productId);
             }
           }
 
+          // Populate diameter table
+          if (record.diameter_table && Array.isArray(record.diameter_table) && record.diameter_table.length > 0) {
+            this.loadDiameterTableData(record.diameter_table);
+          } else {
+            this.resetToDefaultColumns();
+          }
+
           // Set editor content
           this.$nextTick(() => {
             if (this.$refs.editor) {
@@ -819,6 +1178,265 @@ const isEdit = Boolean(productId);
           this.emitToast('Ошибка загрузки данных товара', 'error');
         } finally {
           this.loading = false;
+        }
+      },
+
+      // --- Diameter Table Management ---
+      loadDiameterTableData(dataRows) {
+        // Collect all unique column keys
+        const colKeyMap = {};
+        const colLabelsDict = {
+          diameter_mm: 'Диаметр, мм',
+          inner_diameter_mm: 'Внутренний Ø, мм',
+          outer_diameter_mm: 'Наружный диаметр, мм',
+          working_pressure_bar: 'Рабочее давление, бар',
+          burst_pressure_bar: 'Разрывное давление, бар',
+          bend_radius_mm: 'Радиус изгиба, мм',
+          coil_length_m: 'Длина бухты, м',
+          weight_g_m: 'Вес, г/м',
+          vacuum_bar: 'Вакуум, бар',
+          wall_thickness_mm: 'Толщина стенки, мм'
+        };
+
+        dataRows.forEach(r => {
+          Object.keys(r || {}).forEach(k => {
+            colKeyMap[k] = true;
+          });
+        });
+
+        this.tableColumns = Object.keys(colKeyMap).map((key, idx) => ({
+          id: `col_${idx}_${key}`,
+          label: colLabelsDict[key] || key.replace(/_/g, ' '),
+          key: key
+        }));
+
+        this.tableRows = dataRows.map((r, idx) => {
+          const rowObj = { id: `row_${idx}_${Date.now()}` };
+          this.tableColumns.forEach(c => {
+            rowObj[c.key] = r[c.key] !== undefined ? String(r[c.key]) : '';
+          });
+          return rowObj;
+        });
+      },
+
+      resetToDefaultColumns() {
+        this.tableColumns = this.defaultColumnsList.map((c, idx) => ({
+          id: `col_${idx}_${c.key}`,
+          label: c.label,
+          key: c.key
+        }));
+
+        if (this.tableRows.length === 0) {
+          this.addTableRow();
+        } else {
+          // Normalize existing rows to new columns
+          this.tableRows.forEach(r => {
+            this.tableColumns.forEach(c => {
+              if (r[c.key] === undefined) r[c.key] = '';
+            });
+          });
+        }
+        this.emitToast('Структура колонок сброшена к стандартной', 'info');
+      },
+
+      addTableRow(insertAfterIndex = null) {
+        const newRow = { id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 5)}` };
+        this.tableColumns.forEach(c => {
+          newRow[c.key] = '';
+        });
+
+        if (insertAfterIndex !== null && insertAfterIndex >= 0) {
+          this.tableRows.splice(insertAfterIndex + 1, 0, newRow);
+        } else {
+          this.tableRows.push(newRow);
+        }
+      },
+
+      duplicateRow(index) {
+        const source = this.tableRows[index];
+        if (!source) return;
+        const cloned = { ...source, id: `row_${Date.now()}_${Math.random().toString(36).substr(2, 5)}` };
+        this.tableRows.splice(index + 1, 0, cloned);
+        this.emitToast('Строка продублирована', 'info');
+      },
+
+      deleteRow(index) {
+        this.tableRows.splice(index, 1);
+      },
+
+      openAddColumnModal() {
+        this.newColLabel = '';
+        this.addColModalOpen = true;
+      },
+
+      confirmAddColumn() {
+        const label = this.newColLabel.trim();
+        if (!label) return;
+
+        const key = this.labelToColumnKey(label);
+        const colId = `col_${Date.now()}_${key}`;
+
+        this.tableColumns.push({
+          id: colId,
+          label: label,
+          key: key
+        });
+
+        // Add key to all existing rows
+        this.tableRows.forEach(r => {
+          r[key] = '';
+        });
+
+        this.addColModalOpen = false;
+        this.newColLabel = '';
+        this.emitToast(`Колонка "${label}" добавлена`, 'success');
+      },
+
+      deleteColumn(index) {
+        const col = this.tableColumns[index];
+        if (!col) return;
+        if (confirm(`Удалить колонку "${col.label}"?`)) {
+          const key = col.key;
+          this.tableColumns.splice(index, 1);
+          this.tableRows.forEach(r => {
+            delete r[key];
+          });
+        }
+      },
+
+      moveColumn(index, delta) {
+        const target = index + delta;
+        if (target < 0 || target >= this.tableColumns.length) return;
+        const [col] = this.tableColumns.splice(index, 1);
+        this.tableColumns.splice(target, 0, col);
+      },
+
+      updateColumnKey(col) {
+        const newKey = this.labelToColumnKey(col.label);
+        if (newKey !== col.key) {
+          const oldKey = col.key;
+          col.key = newKey;
+          this.tableRows.forEach(r => {
+            r[newKey] = r[oldKey] || '';
+            delete r[oldKey];
+          });
+        }
+      },
+
+      labelToColumnKey(label) {
+        const standardMap = {
+          'диаметр, мм': 'diameter_mm',
+          'диаметр': 'diameter_mm',
+          'внутренний диаметр, мм': 'inner_diameter_mm',
+          'внутренний диаметр': 'inner_diameter_mm',
+          'наружный диаметр, мм': 'outer_diameter_mm',
+          'наружный диаметр': 'outer_diameter_mm',
+          'нар. ø, мм': 'outer_diameter_mm',
+          'рабочее давление, бар': 'working_pressure_bar',
+          'рабочее давление': 'working_pressure_bar',
+          'разрывное давление, бар': 'burst_pressure_bar',
+          'разрывное давление': 'burst_pressure_bar',
+          'радиус изгиба, мм': 'bend_radius_mm',
+          'радиус изгиба': 'bend_radius_mm',
+          'длина бухты, м': 'coil_length_m',
+          'длина бухты': 'coil_length_m',
+          'вес, г/м': 'weight_g_m',
+          'вес': 'weight_g_m',
+          'вакуум, бар': 'vacuum_bar',
+          'вакуум': 'vacuum_bar',
+          'толщина стенки, мм': 'wall_thickness_mm'
+        };
+
+        const normalized = label.trim().toLowerCase();
+        if (standardMap[normalized]) return standardMap[normalized];
+
+        const ruMap = {
+          'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+          'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+          'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+          'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+          'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+        };
+
+        let key = normalized.split('').map(c => ruMap[c] !== undefined ? ruMap[c] : c).join('');
+        key = key.replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+        return key || `col_${Date.now()}`;
+      },
+
+      // --- Excel Import / Export ---
+      get excelParsedSummary() {
+        if (!this.excelRawText || !this.excelRawText.trim()) return '';
+        const lines = this.excelRawText.trim().split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length === 0) return '';
+        const headers = lines[0].split(/\t/).map(h => h.trim()).filter(Boolean);
+        const dataRowsCount = Math.max(0, lines.length - 1);
+        return `Обнаружено: ${dataRowsCount} строк данных и ${headers.length} колонок ("${headers.slice(0, 3).join('", "')}${headers.length > 3 ? '...' : ''}")`;
+      },
+
+      applyExcelImport() {
+        const text = this.excelRawText.trim();
+        if (!text) return;
+
+        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) {
+          this.emitToast('Нужно минимум 2 строки (заголовки и данные)', 'error');
+          return;
+        }
+
+        // Parse headers
+        const headerLine = lines[0];
+        const delimiter = headerLine.includes('\t') ? '\t' : (headerLine.includes(';') ? ';' : ',');
+        const headers = headerLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
+
+        if (headers.length === 0) {
+          this.emitToast('Не удалось определить колонки', 'error');
+          return;
+        }
+
+        const newCols = headers.map((h, idx) => ({
+          id: `col_${idx}_${Date.now()}`,
+          label: h,
+          key: this.labelToColumnKey(h)
+        }));
+
+        // Parse rows
+        const newRows = [];
+        for (let i = 1; i < lines.length; i++) {
+          const cells = lines[i].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ''));
+          const rowObj = { id: `row_${i}_${Date.now()}` };
+          newCols.forEach((col, cIdx) => {
+            rowObj[col.key] = cells[cIdx] !== undefined ? cells[cIdx] : '';
+          });
+          newRows.push(rowObj);
+        }
+
+        this.tableColumns = newCols;
+        this.tableRows = newRows;
+        this.excelModalOpen = false;
+        this.excelRawText = '';
+        this.emitToast(`Импортировано ${newRows.length} строк и ${newCols.length} колонок`, 'success');
+      },
+
+      exportToExcel() {
+        if (this.tableColumns.length === 0 || this.tableRows.length === 0) {
+          this.emitToast('Таблица пуста', 'error');
+          return;
+        }
+
+        const headerLine = this.tableColumns.map(c => c.label).join('\t');
+        const dataLines = this.tableRows.map(r => {
+          return this.tableColumns.map(c => (r[c.key] !== undefined ? r[c.key] : '')).join('\t');
+        });
+
+        const tsv = [headerLine, ...dataLines].join('\n');
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(tsv).then(() => {
+            this.emitToast('Таблица скопирована в буфер (вставьте в Excel)', 'success');
+          }).catch(err => {
+            console.error('Clipboard copy error:', err);
+            this.emitToast('Не удалось скопировать в буфер', 'error');
+          });
         }
       },
 
@@ -1085,6 +1703,19 @@ const isEdit = Boolean(productId);
               value: s.value.trim()
             }));
 
+          // Clean diameter table: filter out rows where all cells are empty
+          const cleanedTable = this.tableRows
+            .filter(row => {
+              return this.tableColumns.some(c => row[c.key] && String(row[c.key]).trim().length > 0);
+            })
+            .map(row => {
+              const rowData = {};
+              this.tableColumns.forEach(c => {
+                rowData[c.key] = row[c.key] !== undefined ? String(row[c.key]).trim() : '';
+              });
+              return rowData;
+            });
+
           // Build FormData for multipart payload
           const formData = new FormData();
           formData.append('name', this.form.name.trim());
@@ -1094,6 +1725,7 @@ const isEdit = Boolean(productId);
           formData.append('description', this.form.description || '');
           formData.append('tags', JSON.stringify(this.form.tags || []));
           formData.append('specifications', JSON.stringify(cleanedSpecs));
+          formData.append('diameter_table', JSON.stringify(cleanedTable));
           formData.append('is_active', String(Boolean(this.form.is_active)));
           formData.append('is_featured', String(Boolean(this.form.is_featured)));
           formData.append('sort_order', String(Number(this.form.sort_order) || 0));

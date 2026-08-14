@@ -438,6 +438,35 @@ const colLabels: Record<string, string> = {
                 </div>
               </div>
             )}
+
+            <!-- Technical diameter table -->
+            {productData.diameter_table && Array.isArray(productData.diameter_table) && productData.diameter_table.length > 0 && (
+              <div class="mb-8">
+                <h2 class="text-xl font-bold text-text-primary mb-4 font-accent italic">Таблица типоразмеров и диаметров</h2>
+                <div class="bg-white rounded-xl border border-border overflow-hidden">
+                  <div class="overflow-x-auto">
+                    <table class="w-full text-sm text-left">
+                      <thead class="bg-[#F7FAFC] text-text-secondary text-xs uppercase font-semibold border-b border-border">
+                        <tr>
+                          {Object.keys(productData.diameter_table[0] || {}).map((colKey) => (
+                            <th class="px-4 py-3.5 whitespace-nowrap">{colLabels[colKey] || colKey}</th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-border">
+                        {productData.diameter_table.map((row: any, idx: number) => (
+                          <tr class={idx % 2 === 0 ? 'bg-white' : 'bg-bg-secondary/30'}>
+                            {Object.keys(productData.diameter_table[0] || {}).map((colKey) => (
+                              <td class="px-4 py-3 text-text-primary font-medium whitespace-nowrap">{row[colKey] ?? ''}</td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
