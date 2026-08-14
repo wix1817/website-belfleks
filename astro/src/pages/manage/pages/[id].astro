@@ -1,0 +1,11 @@
+---
+import AdminLayout from '../../../layouts/AdminLayout.astro';
+import PageForm from '../../../components/admin/pages/PageForm.astro';
+
+const { id } = Astro.params;
+export const prerender = false;
+---
+
+<AdminLayout title="Редактирование страницы | БелФлекс Админ" activeNav="pages">
+  <PageForm pageId={id!} />
+</AdminLayout>

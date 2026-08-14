@@ -1,0 +1,716 @@
+---
+import Toast from '../ui/Toast.astro';
+import { PB_URL } from '../../../lib/adminAuth';
+
+interface Props {
+  pageId: string;
+}
+
+const { pageId } = Astro.props;
+---
+
+<div
+  x-data={`pageForm('${pageId}', '${PB_URL}')`}
+  x-init="init()"
+  class="space-y-6"
+>
+  <Toast />
+
+  <!-- Draft Restoration Banner -->
+  <div
+    x-show="hasDraft"
+    x-cloak
+    class="p-4 bg-amber-50 border border-amber-200 rounded-[8px] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-amber-900 shadow-2xs"
+  >
+    <div class="flex items-center gap-2.5">
+      <svg class="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <div>
+        <span class="font-bold">Найден локальный автосохраненный черновик</span>
+        <span class="text-amber-700 ml-1" x-text="'(от ' + draftTimeFormatted + ')'"></span>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button
+        type="button"
+        @click="restoreDraft()"
+        class="py-1.5 px-3 rounded-[6px] bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-colors cursor-pointer"
+      >
+        Восстановить
+      </button>
+      <button
+        type="button"
+        @click="discardDraft()"
+        class="py-1.5 px-3 rounded-[6px] bg-white border border-amber-300 hover:bg-amber-100 text-amber-800 font-semibold transition-colors cursor-pointer"
+      >
+        Отклонить
+      </button>
+    </div>
+  </div>
+
+  <!-- Action Bar & Breadcrumbs -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+    <div>
+      <div class="flex items-center gap-2 text-xs text-text-secondary mb-1 font-sans">
+        <a href="/manage/pages" class="hover:text-primary transition-colors">Страницы</a>
+        <span>/</span>
+        <span class="text-gray-900 font-semibold" x-text="form.title ? form.title : 'Редактирование страницы'"></span>
+      </div>
+      <div class="flex items-center gap-3">
+        <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-accent italic">
+          Редактирование страницы
+        </h1>
+        <!-- Auto-save status indicator -->
+        <span
+          x-show="lastAutoSaved"
+          class="text-[11px] text-gray-400 flex items-center gap-1 font-mono"
+          :title="'Черновик сохранен в ' + lastAutoSaved"
+        >
+          <span class="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+          <span>Автосохранено <span x-text="lastAutoSaved"></span></span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex flex-wrap items-center gap-2.5">
+      <a
+        href="/manage/pages"
+        class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold font-sans transition-colors cursor-pointer"
+      >
+        Отмена
+      </a>
+
+      <!-- View on public site -->
+      <a
+        :href="publicPageUrl"
+        target="_blank"
+        class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-700 hover:text-blue-600 hover:border-blue-300 text-xs font-semibold font-sans transition-colors cursor-pointer shadow-2xs"
+      >
+        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+        </svg>
+        Посмотреть на сайте
+      </a>
+
+      <button
+        type="button"
+        @click="save(false)"
+        :disabled="saving"
+        class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-800 hover:bg-gray-50 text-xs font-semibold font-sans transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+      >
+        <template x-if="saving">
+          <svg class="animate-spin h-3.5 w-3.5 text-gray-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </template>
+        Сохранить и остаться
+      </button>
+
+      <button
+        type="button"
+        @click="save(true)"
+        :disabled="saving"
+        class="inline-flex items-center gap-1.5 py-2.5 px-5 rounded-[8px] bg-[#EF1C24] hover:bg-[#d91920] active:scale-[0.99] text-white text-xs font-semibold font-sans transition-all shadow-xs cursor-pointer disabled:opacity-50"
+      >
+        <template x-if="saving">
+          <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </template>
+        Сохранить
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State Indicator -->
+  <div
+    x-show="loading"
+    x-cloak
+    class="py-20 text-center text-primary font-medium text-sm flex items-center justify-center gap-2"
+  >
+    <svg class="animate-spin h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    <span>Загрузка данных страницы...</span>
+  </div>
+
+  <!-- Form Content -->
+  <div x-show="!loading" class="space-y-6">
+    <!-- SECTION 1: ОСНОВНОЕ -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-[#EF1C24]"></span>
+        Основные параметры страницы
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Название (H1) -->
+        <div>
+          <label for="page-title" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Название страницы (H1) <span class="text-[#EF1C24]">*</span>
+          </label>
+          <input
+            id="page-title"
+            type="text"
+            x-model="form.title"
+            placeholder="например: О компании"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all"
+            :class="{ 'border-[#EF1C24] bg-red-50/20': errors.title }"
+          />
+          <template x-if="errors.title">
+            <p class="text-[#EF1C24] text-[12px] mt-1 font-medium" x-text="errors.title"></p>
+          </template>
+        </div>
+
+        <!-- Slug (Disabled for system pages) -->
+        <div>
+          <label for="page-slug" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            URL Slug (Системный адрес)
+          </label>
+          <input
+            id="page-slug"
+            type="text"
+            x-model="form.slug"
+            disabled
+            class="w-full bg-gray-100 border border-gray-200 rounded-[8px] py-2.5 px-3.5 text-sm font-mono text-gray-600 cursor-not-allowed"
+          />
+          <p class="text-xs text-text-secondary mt-1 font-mono">
+            URL на сайте: <span class="text-primary font-semibold" x-text="publicPageUrl"></span>
+          </p>
+        </div>
+
+        <!-- Hero Title -->
+        <div>
+          <label for="hero-title" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Заголовок в шапке (Hero Title)
+          </label>
+          <input
+            id="hero-title"
+            type="text"
+            x-model="form.hero_title"
+            placeholder="например: О компании ООО «БелФлекс»"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all"
+          />
+        </div>
+
+        <!-- Hero Subtitle -->
+        <div>
+          <label for="hero-subtitle" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Подзаголовок в шапке (Hero Subtitle)
+          </label>
+          <input
+            id="hero-subtitle"
+            type="text"
+            x-model="form.hero_subtitle"
+            placeholder="например: Надежный поставщик промышленных рукавов со склада в Гродно"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all"
+          />
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: КОНТЕНТ СТРАНИЦЫ (WYSIWYG РЕДАКТОР) -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-base font-bold text-gray-900 font-sans flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+          Контент страницы (WYSIWYG редактор)
+        </h2>
+      </div>
+      <p class="text-xs text-text-secondary mb-4">
+        Форматируйте текст, добавляйте заголовки H2-H4, списки, ссылки и цитаты.
+      </p>
+
+      <div class="border border-[#EDF2F7] rounded-[8px] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-[#EF1C24]/20 transition-all">
+        <!-- Rich Text Toolbar -->
+        <div class="bg-[#F7FAFC] border-b border-[#EDF2F7] p-2 flex flex-wrap items-center gap-1">
+          <!-- Text Styling: Bold, Italic, Underline, Strike -->
+          <button
+            type="button"
+            @click="execFormat('bold')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 font-bold text-xs min-w-[28px] h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Жирный (Ctrl+B)"
+          >
+            B
+          </button>
+          <button
+            type="button"
+            @click="execFormat('italic')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 italic text-xs min-w-[28px] h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Курсив (Ctrl+I)"
+          >
+            I
+          </button>
+          <button
+            type="button"
+            @click="execFormat('underline')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 underline text-xs min-w-[28px] h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Подчеркнутый (Ctrl+U)"
+          >
+            U
+          </button>
+          <button
+            type="button"
+            @click="execFormat('strikeThrough')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 line-through text-xs min-w-[28px] h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Зачеркнутый"
+          >
+            S
+          </button>
+
+          <span class="w-px h-4 bg-gray-300 mx-1"></span>
+
+          <!-- Headings & Paragraph -->
+          <button
+            type="button"
+            @click="execFormat('formatBlock', '<h2>')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 font-bold text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Заголовок H2"
+          >
+            H2
+          </button>
+          <button
+            type="button"
+            @click="execFormat('formatBlock', '<h3>')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 font-bold text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Заголовок H3"
+          >
+            H3
+          </button>
+          <button
+            type="button"
+            @click="execFormat('formatBlock', '<h4>')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 font-bold text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Заголовок H4"
+          >
+            H4
+          </button>
+          <button
+            type="button"
+            @click="execFormat('formatBlock', '<p>')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Обычный текст (абзац)"
+          >
+            ¶ Текст
+          </button>
+
+          <span class="w-px h-4 bg-gray-300 mx-1"></span>
+
+          <!-- Lists & Quotes -->
+          <button
+            type="button"
+            @click="execFormat('insertUnorderedList')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Маркированный список"
+          >
+            • Список
+          </button>
+          <button
+            type="button"
+            @click="execFormat('insertOrderedList')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Нумерованный список"
+          >
+            1. Список
+          </button>
+          <button
+            type="button"
+            @click="execFormat('formatBlock', '<blockquote>')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors font-serif italic"
+            title="Цитата"
+          >
+            “ Цитата
+          </button>
+
+          <span class="w-px h-4 bg-gray-300 mx-1"></span>
+
+          <!-- Links -->
+          <button
+            type="button"
+            @click="insertLink()"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Вставить ссылку"
+          >
+            🔗 Ссылка
+          </button>
+          <button
+            type="button"
+            @click="execFormat('unlink')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+            title="Удалить ссылку"
+          >
+            ❌ Убрать ссылку
+          </button>
+
+          <!-- Clear Formatting -->
+          <button
+            type="button"
+            @click="execFormat('removeFormat')"
+            class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-500 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors ml-auto"
+            title="Очистить форматирование"
+          >
+            Очистить
+          </button>
+        </div>
+
+        <!-- Editable Area -->
+        <div
+          x-ref="editor"
+          contenteditable="true"
+          @input="onContentChange()"
+          @blur="onContentChange()"
+          class="p-5 bg-white min-h-[320px] text-sm text-gray-900 focus:outline-none prose prose-slate max-w-none leading-relaxed"
+          placeholder="Введите подробный текст страницы..."
+        ></div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: SEO (META TITLE, META DESCRIPTION & GOOGLE PREVIEW) -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-1 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+        Поисковая оптимизация (SEO)
+      </h2>
+      <p class="text-xs text-text-secondary mb-5">
+        Мета-теги для поисковых систем Яндекс и Google.
+      </p>
+
+      <div class="space-y-5">
+        <!-- Meta Title -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="meta-title" class="block text-sm font-medium text-[#3B3B3B]">
+              Meta Title (Заголовок во вкладке браузера и поисковиках)
+            </label>
+            <span
+              class="text-xs font-mono"
+              :class="form.meta_title.length > 60 ? 'text-orange-600 font-semibold' : 'text-gray-400'"
+              x-text="form.meta_title.length + '/60'"
+            ></span>
+          </div>
+          <input
+            id="meta-title"
+            type="text"
+            x-model="form.meta_title"
+            placeholder="например: О компании ООО «БелФлекс» — надежный поставщик промышленных рукавов"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all"
+          />
+        </div>
+
+        <!-- Meta Description -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="meta-desc" class="block text-sm font-medium text-[#3B3B3B]">
+              Meta Description (Краткое описание для поисковых сниппетов)
+            </label>
+            <span
+              class="text-xs font-mono"
+              :class="form.meta_description.length > 160 ? 'text-orange-600 font-semibold' : 'text-gray-400'"
+              x-text="form.meta_description.length + '/160'"
+            ></span>
+          </div>
+          <textarea
+            id="meta-desc"
+            rows="3"
+            x-model="form.meta_description"
+            placeholder="например: Информация о компании ООО «БелФлекс». Официальный дилер и импортер промышленных рукавов, шлангов и соединений со склада в Гродно..."
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-sm text-gray-900 transition-all resize-y"
+          ></textarea>
+        </div>
+
+        <!-- Live Google SERP Snippet Preview -->
+        <div class="p-4 bg-[#F8F9FA] rounded-[8px] border border-[#DADCE0] mt-4">
+          <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
+            Предпросмотр в Google (SERP)
+          </div>
+
+          <div class="bg-white p-4 rounded-[6px] border border-gray-200 shadow-2xs font-sans max-w-2xl">
+            <div class="flex items-center gap-2 text-xs mb-1">
+              <div class="w-4 h-4 rounded-full bg-[#EF1C24] text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                Б
+              </div>
+              <div class="truncate text-[#202124] text-xs">
+                <span class="font-medium">ООО «БелФлекс»</span>
+                <span class="text-[#5f6368] text-[11px]"> › <span x-text="form.slug === 'home' ? '' : form.slug"></span></span>
+              </div>
+            </div>
+
+            <h4 class="text-base sm:text-lg text-[#1a0dab] hover:underline cursor-pointer font-medium leading-snug truncate">
+              <span x-text="form.meta_title ? form.meta_title : (form.title ? form.title + ' — ООО «БелФлекс»' : 'Заголовок страницы — ООО «БелФлекс»')"></span>
+            </h4>
+
+            <p class="text-xs sm:text-sm text-[#4d5156] leading-relaxed mt-1 line-clamp-2">
+              <span x-text="form.meta_description ? form.meta_description : (form.hero_subtitle ? form.hero_subtitle : 'Официальный сайт ООО «БелФлекс». Промышленные рукава и соединения со склада в Гродно...')"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 4: НАСТРОЙКИ ПУБЛИКАЦИИ -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+        Настройки публикации
+      </h2>
+
+      <div class="flex items-center justify-between p-3.5 bg-[#F7FAFC] rounded-[8px] border border-border max-w-md">
+        <div>
+          <label class="block text-sm font-semibold text-gray-900 cursor-pointer" @click="form.is_active = !form.is_active">
+            Активна
+          </label>
+          <span class="text-xs text-text-secondary">Отображать страницу на сайте</span>
+        </div>
+        <button
+          type="button"
+          @click="form.is_active = !form.is_active"
+          :class="form.is_active ? 'bg-green-500' : 'bg-gray-300'"
+          class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+          role="switch"
+          :aria-checked="form.is_active"
+        >
+          <span
+            :class="form.is_active ? 'translate-x-5' : 'translate-x-0'"
+            class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+          ></span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Global Page Form Alpine Script -->
+<script is:inline>
+  window.pageForm = function(pageId, pbUrl) {
+    return {
+      pb: null,
+      pageId: pageId || '',
+      pbUrl: pbUrl || 'http://127.0.0.1:8090',
+      loading: true,
+      saving: false,
+      errors: {},
+      autoSaveTimer: null,
+      lastAutoSaved: '',
+      hasDraft: false,
+      draftData: null,
+      draftTimeFormatted: '',
+
+      form: {
+        title: '',
+        slug: '',
+        hero_title: '',
+        hero_subtitle: '',
+        content: '',
+        meta_title: '',
+        meta_description: '',
+        is_active: true,
+      },
+
+      get publicPageUrl() {
+        if (!this.form.slug || this.form.slug === 'home') return '/';
+        return `/${this.form.slug}`;
+      },
+
+      async init() {
+        this.initPb(this.pbUrl);
+        await this.loadPageData();
+
+        // Check for existing local draft
+        this.checkLocalDraft();
+
+        // Setup 30s auto-save interval
+        this.autoSaveTimer = setInterval(() => {
+          this.autoSaveDraft();
+        }, 30000);
+      },
+
+      initPb(url) {
+        if (window.PocketBase) {
+          this.pb = new window.PocketBase(url || this.pbUrl);
+          this.pb.autoCancellation(false);
+          this.pb.authStore.loadFromCookie(document.cookie);
+        }
+      },
+
+      async loadPageData() {
+        this.loading = true;
+        try {
+          if (!this.pb) this.initPb(this.pbUrl);
+          if (!this.pb) return;
+
+          const record = await this.pb.collection('pages').getOne(this.pageId, {
+            $autoCancel: false,
+            requestKey: null
+          });
+
+          this.form.title = record.title || '';
+          this.form.slug = record.slug || '';
+          this.form.hero_title = record.hero_title || '';
+          this.form.hero_subtitle = record.hero_subtitle || '';
+          this.form.content = record.content || '';
+          this.form.meta_title = record.meta_title || '';
+          this.form.meta_description = record.meta_description || '';
+          this.form.is_active = record.is_active !== undefined ? record.is_active : true;
+
+          // Populate WYSIWYG editor
+          this.$nextTick(() => {
+            if (this.$refs.editor) {
+              this.$refs.editor.innerHTML = this.form.content;
+            }
+          });
+        } catch (e) {
+          console.error('Error loading page data:', e);
+          this.emitToast('Ошибка загрузки страницы', 'error');
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      onContentChange() {
+        if (this.$refs.editor) {
+          this.form.content = this.$refs.editor.innerHTML;
+        }
+      },
+
+      execFormat(cmd, val = null) {
+        document.execCommand(cmd, false, val);
+        this.onContentChange();
+      },
+
+      insertLink() {
+        const url = prompt('Введите URL ссылки (например: https://example.com):');
+        if (url) {
+          this.execFormat('createLink', url);
+        }
+      },
+
+      // --- Draft Auto-save in localStorage ---
+      get draftStorageKey() {
+        return `draft_page_${this.pageId}`;
+      },
+
+      checkLocalDraft() {
+        try {
+          const raw = localStorage.getItem(this.draftStorageKey);
+          if (!raw) return;
+
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed.timestamp && parsed.form) {
+            // Check if draft has difference
+            if (JSON.stringify(parsed.form) !== JSON.stringify(this.form)) {
+              this.hasDraft = true;
+              this.draftData = parsed.form;
+              const date = new Date(parsed.timestamp);
+              this.draftTimeFormatted = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + date.toLocaleDateString();
+            }
+          }
+        } catch (e) {
+          console.warn('Error reading draft:', e);
+        }
+      },
+
+      restoreDraft() {
+        if (!this.draftData) return;
+        this.form = { ...this.draftData };
+        if (this.$refs.editor) {
+          this.$refs.editor.innerHTML = this.form.content || '';
+        }
+        this.hasDraft = false;
+        this.emitToast('Черновик восстановлен', 'info');
+      },
+
+      discardDraft() {
+        localStorage.removeItem(this.draftStorageKey);
+        this.hasDraft = false;
+        this.draftData = null;
+        this.emitToast('Черновик отклонен', 'info');
+      },
+
+      autoSaveDraft() {
+        if (this.loading || this.saving) return;
+        this.onContentChange();
+
+        const payload = {
+          timestamp: Date.now(),
+          form: this.form
+        };
+
+        try {
+          localStorage.setItem(this.draftStorageKey, JSON.stringify(payload));
+          const date = new Date();
+          this.lastAutoSaved = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        } catch (e) {
+          console.warn('Auto-save error:', e);
+        }
+      },
+
+      async validate() {
+        this.errors = {};
+        if (!this.form.title.trim()) {
+          this.errors.title = 'Название страницы обязательно';
+          return false;
+        }
+        return true;
+      },
+
+      async save(redirectAfter = true) {
+        const isValid = await this.validate();
+        if (!isValid) {
+          this.emitToast('Пожалуйста, заполните обязательные поля', 'error');
+          return;
+        }
+
+        this.saving = true;
+        this.onContentChange();
+
+        try {
+          if (!this.pb) this.initPb(this.pbUrl);
+
+          const payload = {
+            title: this.form.title.trim(),
+            hero_title: this.form.hero_title.trim(),
+            hero_subtitle: this.form.hero_subtitle.trim(),
+            content: this.form.content,
+            meta_title: this.form.meta_title.trim(),
+            meta_description: this.form.meta_description.trim(),
+            is_active: Boolean(this.form.is_active)
+          };
+
+          await this.pb.collection('pages').update(this.pageId, payload);
+          
+          // Clear localStorage draft upon successful save
+          localStorage.removeItem(this.draftStorageKey);
+          this.hasDraft = false;
+
+          this.emitToast('Страница успешно сохранена', 'success');
+
+          if (redirectAfter) {
+            setTimeout(() => {
+              window.location.href = '/manage/pages';
+            }, 500);
+          }
+        } catch (e) {
+          console.error('Error saving page:', e);
+          const msg = e?.response?.message || e?.message || 'Не удалось сохранить страницу';
+          this.emitToast(msg, 'error');
+        } finally {
+          this.saving = false;
+        }
+      },
+
+      emitToast(message, type = 'success') {
+        window.dispatchEvent(new CustomEvent('admin-toast', {
+          detail: { message, type }
+        }));
+      }
+    };
+  };
+</script>

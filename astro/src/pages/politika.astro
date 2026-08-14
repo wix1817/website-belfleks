@@ -1,0 +1,60 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { pb } from '../lib/pocketbase';
+
+let pageData: any = null;
+try {
+  pageData = await pb.collection('pages').getFirstListItem('slug="politika" && is_active=true').catch(() => null);
+} catch {
+  // fallback
+}
+
+const title = pageData?.meta_title || 'Политика конфиденциальности | ООО «БелФлекс»';
+const description = pageData?.meta_description || 'Политика обработки персональных данных ООО БелФлекс.';
+---
+
+<Layout title={title} description={description}>
+  <!-- Hero Section -->
+  <section class="bg-bg-secondary border-b border-border py-12">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      <nav class="flex text-xs text-text-muted mb-4" aria-label="Breadcrumb">
+        <ol class="inline-flex items-center space-x-2">
+          <li><a href="/" class="hover:text-primary transition-colors">Главная</a></li>
+          <li><span>/</span></li>
+          <li class="text-text-primary font-medium">Политика конфиденциальности</li>
+        </ol>
+      </nav>
+      <h1 class="text-3xl sm:text-4xl font-bold text-text-primary font-accent italic tracking-tight">
+        {pageData?.hero_title || pageData?.title || 'Политика конфиденциальности'}
+      </h1>
+      {pageData?.hero_subtitle && (
+        <p class="mt-3 text-text-secondary text-base sm:text-lg leading-relaxed">
+          {pageData.hero_subtitle}
+        </p>
+      )}
+    </div>
+  </section>
+
+  <!-- Content Section -->
+  <section class="py-12 bg-white">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6">
+      {pageData?.content ? (
+        <div class="prose prose-slate max-w-none text-text-secondary leading-relaxed space-y-4" set:html={pageData.content} />
+      ) : (
+        <div class="prose prose-slate max-w-none text-text-secondary leading-relaxed space-y-4">
+          <p>Настоящая Политика конфиденциальности определяет порядок обработки и защиты персональной информации пользователей сайта <strong>ООО «БелФлекс»</strong> (далее — Компания).</p>
+          <h2>1. Общие положения</h2>
+          <p>1.1. Использование сайта означает согласие пользователя с настоящей Политикой конфиденциальности и условиями обработки персональных данных.</p>
+          <p>1.2. В случае несогласия с условиями Политики пользователь должен прекратить использование сайта.</p>
+          <h2>2. Собираемая информация</h2>
+          <p>2.1. Мы собираем контактные данные (имя, номер телефона, адрес электронной почты), предоставленные пользователем добровольно при заполнении форм обратной связи или заявок на расчет стоимости.</p>
+          <p>2.2. Сайт может собирать обезличенные данные о посещаемости (файлы cookie, IP-адреса, параметры браузера) для улучшения качества работы сервиса.</p>
+          <h2>3. Цели обработки данных</h2>
+          <p>3.1. Персональные данные используются для обработки запросов, подготовки коммерческих предложений, заключения договоров и связи с клиентами.</p>
+          <h2>4. Контакты</h2>
+          <p>По вопросам, связанным с обработкой персональных данных, обращайтесь по электронной почте: <a href="mailto:info@bflex.by" class="text-primary hover:underline">info@bflex.by</a> или по телефону <a href="tel:+375291234567" class="text-primary hover:underline">+375 (29) 123-45-67</a>.</p>
+        </div>
+      )}
+    </div>
+  </section>
+</Layout>
