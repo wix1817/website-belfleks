@@ -423,7 +423,7 @@ import { PB_URL } from '../../../lib/adminAuth';
             const result = await this.pb.collection('products').getList(this.page, this.perPage, {
               filter: filterStr,
               expand: 'category',
-              sort: '-created',
+              sort: 'sort_order,name',
               $autoCancel: false,
               requestKey: null
             });
@@ -433,7 +433,7 @@ import { PB_URL } from '../../../lib/adminAuth';
             this.totalItems = result.totalItems || 0;
           } catch (e) {
             console.error('Error loading products:', e);
-            this.showToast('Ошибка загрузки товаров', 'error');
+            this.showToast('Ошибка загрузки товаров: ' + (e?.message || 'ошибка сети'), 'error');
           } finally {
             this.loading = false;
           }
