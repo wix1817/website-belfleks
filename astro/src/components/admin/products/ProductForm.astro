@@ -742,10 +742,10 @@ const isEdit = Boolean(productId);
             <div class="relative" @click.outside="upsellDropdownOpen = false">
               <input
                 type="text"
-                x-model.debounce.300ms="upsellQuery"
-                @input="searchUpsell()"
-                @focus="if (upsellQuery.length >= 3) upsellDropdownOpen = true"
-                placeholder="Поиск товара для добавления (введите 3+ символа)..."
+                x-model="upsellQuery"
+                @input.debounce.200ms="searchUpsell()"
+                @focus="if ((upsellQuery || '').trim().length >= 2) { upsellDropdownOpen = true; searchUpsell(); }"
+                placeholder="Поиск товара для добавления (начните вводить название)..."
                 class="w-full bg-[#F7FAFC] border border-border focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-xs sm:text-sm text-gray-900 transition-all"
               />
 
@@ -755,26 +755,35 @@ const isEdit = Boolean(productId);
                 x-cloak
                 class="absolute left-0 right-0 top-full mt-1 bg-white border border-border rounded-[8px] shadow-lg max-h-60 overflow-y-auto z-30 divide-y divide-border"
               >
-                <div x-show="upsellLoading" class="p-3 text-center text-xs text-gray-400">
-                  Поиск товаров...
+                <div x-show="upsellLoading" class="p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                  <svg class="animate-spin h-3.5 w-3.5 text-primary" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Поиск товаров...</span>
                 </div>
                 <template x-for="item in upsellResults" :key="item.id">
                   <div
                     @click="addUpsell(item)"
                     class="p-2.5 hover:bg-red-50/40 transition-colors flex items-center justify-between cursor-pointer"
                   >
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded bg-gray-100 border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
-                        <template x-if="item.images && item.images.length > 0">
-                          <img :src="`${pbUrl}/api/files/products/${item.id}/${item.images[0]}?thumb=100x100`" class="w-full h-full object-cover" />
+                    <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                      <div class="w-9 h-9 rounded bg-gray-50 border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        <template x-if="getProductImageUrl(item)">
+                          <img :src="getProductImageUrl(item)" class="w-full h-full object-cover" />
+                        </template>
+                        <template x-if="!getProductImageUrl(item)">
+                          <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                          </svg>
                         </template>
                       </div>
-                      <div>
-                        <div class="text-xs font-semibold text-gray-900" x-text="item.name"></div>
-                        <div class="text-[10px] text-gray-400 font-mono" x-text="item.slug"></div>
+                      <div class="min-w-0">
+                        <div class="text-xs font-semibold text-gray-900 truncate" x-text="item.name"></div>
+                        <div class="text-[10px] text-gray-400 font-mono truncate" x-text="item.slug"></div>
                       </div>
                     </div>
-                    <span class="text-xs text-primary font-semibold">+ Добавить</span>
+                    <span class="text-xs text-primary font-semibold flex-shrink-0">+ Добавить</span>
                   </div>
                 </template>
               </div>
@@ -783,12 +792,20 @@ const isEdit = Boolean(productId);
             <!-- Selected Upsells Chips -->
             <div class="flex flex-wrap items-center gap-2 mt-3">
               <template x-for="(prod, uIdx) in selectedUpsells" :key="prod.id">
-                <span class="inline-flex items-center gap-2 py-1.5 pl-2.5 pr-2 bg-gray-50 border border-border text-gray-800 rounded-[6px] text-xs font-medium shadow-2xs">
-                  <span x-text="prod.name"></span>
+                <span class="inline-flex items-center gap-2 py-1 pl-1 pr-2.5 bg-white border border-border text-gray-800 rounded-[6px] text-xs font-medium shadow-2xs">
+                  <div class="w-6 h-6 rounded bg-gray-50 border border-border/60 overflow-hidden flex items-center justify-center flex-shrink-0">
+                    <template x-if="getProductImageUrl(prod)">
+                      <img :src="getProductImageUrl(prod)" class="w-full h-full object-cover" />
+                    </template>
+                    <template x-if="!getProductImageUrl(prod)">
+                      <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </template>
+                  </div>
+                  <span class="line-clamp-1 max-w-[220px]" x-text="prod.name"></span>
                   <button
                     type="button"
                     @click="removeUpsell(uIdx)"
-                    class="w-4 h-4 rounded-full hover:bg-red-100 hover:text-[#EF1C24] text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
+                    class="w-4 h-4 rounded-full hover:bg-red-50 hover:text-[#EF1C24] text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
                   >
                     ×
                   </button>
@@ -813,10 +830,10 @@ const isEdit = Boolean(productId);
             <div class="relative" @click.outside="crossellDropdownOpen = false">
               <input
                 type="text"
-                x-model.debounce.300ms="crossellQuery"
-                @input="searchCrossell()"
-                @focus="if (crossellQuery.length >= 3) crossellDropdownOpen = true"
-                placeholder="Поиск товара для добавления (введите 3+ символа)..."
+                x-model="crossellQuery"
+                @input.debounce.200ms="searchCrossell()"
+                @focus="if ((crossellQuery || '').trim().length >= 2) { crossellDropdownOpen = true; searchCrossell(); }"
+                placeholder="Поиск товара для добавления (начните вводить название)..."
                 class="w-full bg-[#F7FAFC] border border-border focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-xs sm:text-sm text-gray-900 transition-all"
               />
 
@@ -826,26 +843,35 @@ const isEdit = Boolean(productId);
                 x-cloak
                 class="absolute left-0 right-0 top-full mt-1 bg-white border border-border rounded-[8px] shadow-lg max-h-60 overflow-y-auto z-30 divide-y divide-border"
               >
-                <div x-show="crossellLoading" class="p-3 text-center text-xs text-gray-400">
-                  Поиск товаров...
+                <div x-show="crossellLoading" class="p-3 text-center text-xs text-gray-400 flex items-center justify-center gap-2">
+                  <svg class="animate-spin h-3.5 w-3.5 text-primary" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Поиск товаров...</span>
                 </div>
                 <template x-for="item in crossellResults" :key="item.id">
                   <div
                     @click="addCrossell(item)"
                     class="p-2.5 hover:bg-red-50/40 transition-colors flex items-center justify-between cursor-pointer"
                   >
-                    <div class="flex items-center gap-2.5">
-                      <div class="w-8 h-8 rounded bg-gray-100 border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
-                        <template x-if="item.images && item.images.length > 0">
-                          <img :src="`${pbUrl}/api/files/products/${item.id}/${item.images[0]}?thumb=100x100`" class="w-full h-full object-cover" />
+                    <div class="flex items-center gap-2.5 min-w-0 pr-2">
+                      <div class="w-9 h-9 rounded bg-gray-50 border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        <template x-if="getProductImageUrl(item)">
+                          <img :src="getProductImageUrl(item)" class="w-full h-full object-cover" />
+                        </template>
+                        <template x-if="!getProductImageUrl(item)">
+                          <svg class="w-4 h-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                          </svg>
                         </template>
                       </div>
-                      <div>
-                        <div class="text-xs font-semibold text-gray-900" x-text="item.name"></div>
-                        <div class="text-[10px] text-gray-400 font-mono" x-text="item.slug"></div>
+                      <div class="min-w-0">
+                        <div class="text-xs font-semibold text-gray-900 truncate" x-text="item.name"></div>
+                        <div class="text-[10px] text-gray-400 font-mono truncate" x-text="item.slug"></div>
                       </div>
                     </div>
-                    <span class="text-xs text-primary font-semibold">+ Добавить</span>
+                    <span class="text-xs text-primary font-semibold flex-shrink-0">+ Добавить</span>
                   </div>
                 </template>
               </div>
@@ -854,12 +880,20 @@ const isEdit = Boolean(productId);
             <!-- Selected Crossells Chips -->
             <div class="flex flex-wrap items-center gap-2 mt-3">
               <template x-for="(prod, cIdx) in selectedCrossells" :key="prod.id">
-                <span class="inline-flex items-center gap-2 py-1.5 pl-2.5 pr-2 bg-gray-50 border border-border text-gray-800 rounded-[6px] text-xs font-medium shadow-2xs">
-                  <span x-text="prod.name"></span>
+                <span class="inline-flex items-center gap-2 py-1 pl-1 pr-2.5 bg-white border border-border text-gray-800 rounded-[6px] text-xs font-medium shadow-2xs">
+                  <div class="w-6 h-6 rounded bg-gray-50 border border-border/60 overflow-hidden flex items-center justify-center flex-shrink-0">
+                    <template x-if="getProductImageUrl(prod)">
+                      <img :src="getProductImageUrl(prod)" class="w-full h-full object-cover" />
+                    </template>
+                    <template x-if="!getProductImageUrl(prod)">
+                      <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                    </template>
+                  </div>
+                  <span class="line-clamp-1 max-w-[220px]" x-text="prod.name"></span>
                   <button
                     type="button"
                     @click="removeCrossell(cIdx)"
-                    class="w-4 h-4 rounded-full hover:bg-red-100 hover:text-[#EF1C24] text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
+                    class="w-4 h-4 rounded-full hover:bg-red-50 hover:text-[#EF1C24] text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
                   >
                     ×
                   </button>
@@ -1370,6 +1404,7 @@ const isEdit = Boolean(productId);
     return {
       pb: null,
       productId: id || '',
+      pbUrl: pbUrl || 'http://127.0.0.1:8090',
       isEdit: Boolean(id),
       loading: false,
       saving: false,
@@ -1392,8 +1427,8 @@ const isEdit = Boolean(productId);
       newColLabel: '',
 
       // Upsell & Cross-sell
-      selectedUpsells: [], // array of { id, name, slug, image }
-      selectedCrossells: [], // array of { id, name, slug, image }
+      selectedUpsells: [], // array of { id, name, slug, images }
+      selectedCrossells: [], // array of { id, name, slug, images }
       upsellQuery: '',
       upsellResults: [],
       upsellLoading: false,
@@ -1431,8 +1466,15 @@ const isEdit = Boolean(productId);
         { label: 'Вес, г/м', key: 'weight_g_m' }
       ],
 
+      getProductImageUrl(item) {
+        if (!item) return '';
+        const img = Array.isArray(item.images) ? item.images[0] : (item.images || item.image || null);
+        if (!img) return '';
+        return `${this.pbUrl}/api/files/products/${item.id}/${img}?thumb=100x100`;
+      },
+
       async init() {
-        this.initPb(pbUrl);
+        this.initPb(this.pbUrl);
         await this.loadCategories();
 
         if (this.productId) {
@@ -1444,7 +1486,7 @@ const isEdit = Boolean(productId);
 
       initPb(url) {
         if (window.PocketBase) {
-          this.pb = new window.PocketBase(url);
+          this.pb = new window.PocketBase(url || this.pbUrl);
           this.pb.autoCancellation(false);
           this.pb.authStore.loadFromCookie(document.cookie);
         }
@@ -1452,7 +1494,7 @@ const isEdit = Boolean(productId);
 
       async loadCategories() {
         try {
-          if (!this.pb) this.initPb(pbUrl);
+          if (!this.pb) this.initPb(this.pbUrl);
           if (!this.pb) return;
 
           const list = await this.pb.collection('categories').getFullList({
@@ -1469,7 +1511,7 @@ const isEdit = Boolean(productId);
       async loadProductData() {
         this.loading = true;
         try {
-          if (!this.pb) this.initPb(pbUrl);
+          if (!this.pb) this.initPb(this.pbUrl);
           if (!this.pb) return;
 
           const record = await this.pb.collection('products').getOne(this.productId, {
@@ -1496,7 +1538,7 @@ const isEdit = Boolean(productId);
             : (record.images ? [record.images] : []);
 
           this.images = rawImages.map((imgName, idx) => {
-            const fileUrl = `${pbUrl}/api/files/products/${record.id}/${imgName}`;
+            const fileUrl = `${this.pbUrl}/api/files/products/${record.id}/${imgName}`;
             return {
               id: `existing_${idx}_${imgName}`,
               name: imgName,
@@ -1535,11 +1577,21 @@ const isEdit = Boolean(productId);
           // Populate Upsell & Cross-sell
           if (record.expand?.upsell) {
             const upsells = Array.isArray(record.expand.upsell) ? record.expand.upsell : [record.expand.upsell];
-            this.selectedUpsells = upsells.map(u => ({ id: u.id, name: u.name, slug: u.slug }));
+            this.selectedUpsells = upsells.map(u => ({
+              id: u.id,
+              name: u.name,
+              slug: u.slug,
+              images: Array.isArray(u.images) ? u.images : (u.images ? [u.images] : [])
+            }));
           }
           if (record.expand?.crossell) {
             const crossells = Array.isArray(record.expand.crossell) ? record.expand.crossell : [record.expand.crossell];
-            this.selectedCrossells = crossells.map(c => ({ id: c.id, name: c.name, slug: c.slug }));
+            this.selectedCrossells = crossells.map(c => ({
+              id: c.id,
+              name: c.name,
+              slug: c.slug,
+              images: Array.isArray(c.images) ? c.images : (c.images ? [c.images] : [])
+            }));
           }
 
           // Populate FAQ
@@ -1567,7 +1619,8 @@ const isEdit = Boolean(productId);
 
       // --- Upsell & Cross-sell Search and Management ---
       async searchUpsell() {
-        if (this.upsellQuery.length < 3) {
+        const q = (this.upsellQuery || '').trim();
+        if (q.length < 2) {
           this.upsellResults = [];
           this.upsellDropdownOpen = false;
           return;
@@ -1576,10 +1629,11 @@ const isEdit = Boolean(productId);
         this.upsellLoading = true;
         this.upsellDropdownOpen = true;
         try {
-          if (!this.pb) this.initPb(pbUrl);
-          const filter = `name ~ "${this.upsellQuery.trim()}"${this.productId ? ` && id != "${this.productId}"` : ''}`;
-          const res = await this.pb.collection('products').getList(1, 8, {
+          if (!this.pb) this.initPb(this.pbUrl);
+          const filter = `name ~ "${q}"${this.productId ? ` && id != "${this.productId}"` : ''}`;
+          const res = await this.pb.collection('products').getList(1, 10, {
             filter: filter,
+            sort: 'name',
             $autoCancel: false,
             requestKey: null
           });
@@ -1593,7 +1647,12 @@ const isEdit = Boolean(productId);
 
       addUpsell(item) {
         if (!this.selectedUpsells.some(u => u.id === item.id)) {
-          this.selectedUpsells.push({ id: item.id, name: item.name, slug: item.slug });
+          this.selectedUpsells.push({
+            id: item.id,
+            name: item.name,
+            slug: item.slug,
+            images: Array.isArray(item.images) ? item.images : (item.images ? [item.images] : [])
+          });
           this.emitToast(`Товар "${item.name}" добавлен в Upsell`, 'success');
         }
         this.upsellQuery = '';
@@ -1605,7 +1664,8 @@ const isEdit = Boolean(productId);
       },
 
       async searchCrossell() {
-        if (this.crossellQuery.length < 3) {
+        const q = (this.crossellQuery || '').trim();
+        if (q.length < 2) {
           this.crossellResults = [];
           this.crossellDropdownOpen = false;
           return;
@@ -1614,10 +1674,11 @@ const isEdit = Boolean(productId);
         this.crossellLoading = true;
         this.crossellDropdownOpen = true;
         try {
-          if (!this.pb) this.initPb(pbUrl);
-          const filter = `name ~ "${this.crossellQuery.trim()}"${this.productId ? ` && id != "${this.productId}"` : ''}`;
-          const res = await this.pb.collection('products').getList(1, 8, {
+          if (!this.pb) this.initPb(this.pbUrl);
+          const filter = `name ~ "${q}"${this.productId ? ` && id != "${this.productId}"` : ''}`;
+          const res = await this.pb.collection('products').getList(1, 10, {
             filter: filter,
+            sort: 'name',
             $autoCancel: false,
             requestKey: null
           });
@@ -1631,7 +1692,12 @@ const isEdit = Boolean(productId);
 
       addCrossell(item) {
         if (!this.selectedCrossells.some(c => c.id === item.id)) {
-          this.selectedCrossells.push({ id: item.id, name: item.name, slug: item.slug });
+          this.selectedCrossells.push({
+            id: item.id,
+            name: item.name,
+            slug: item.slug,
+            images: Array.isArray(item.images) ? item.images : (item.images ? [item.images] : [])
+          });
           this.emitToast(`Товар "${item.name}" добавлен в Cross-sell`, 'success');
         }
         this.crossellQuery = '';
