@@ -213,7 +213,121 @@ const isEdit = Boolean(productId);
       </div>
     </div>
 
-    <!-- SECTION 2: ОПИСАНИЕ -->
+    <!-- SECTION 2: ИЗОБРАЖЕНИЯ ТОВАРА (Drag and drop + Reordering) -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-base font-bold text-gray-900 font-sans flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-purple-500"></span>
+          Изображения товара
+        </h2>
+        <span class="text-xs text-text-secondary font-mono" x-text="images.length + '/10 фото'"></span>
+      </div>
+      <p class="text-xs text-text-secondary mb-4">
+        Первое изображение будет основным в каталоге и на карточке товара. Перетаскивайте карточки для изменения порядка.
+      </p>
+
+      <!-- Drag & Drop Dropzone -->
+      <div
+        @dragover.prevent="isDraggingOver = true"
+        @dragleave.prevent="isDraggingOver = false"
+        @drop.prevent="handleDrop($event)"
+        @click="$refs.fileInput.click()"
+        class="border-2 border-dashed rounded-[8px] p-6 text-center transition-all cursor-pointer"
+        :class="isDraggingOver ? 'border-[#EF1C24] bg-red-50/30 ring-2 ring-[#EF1C24]/10' : 'border-gray-200 hover:border-gray-300 bg-[#F7FAFC]'"
+      >
+        <input
+          type="file"
+          x-ref="fileInput"
+          @change="handleFileInput($event)"
+          multiple
+          accept="image/jpeg,image/png,image/webp"
+          class="hidden"
+        />
+
+        <div class="flex flex-col items-center justify-center pointer-events-none">
+          <div class="w-12 h-12 rounded-full bg-white shadow-2xs border border-border flex items-center justify-center text-primary mb-2.5">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </div>
+          <p class="text-sm font-semibold text-gray-800">
+            Перетащите изображения сюда или <span class="text-primary underline">выберите на диске</span>
+          </p>
+          <p class="text-xs text-gray-500 mt-1">
+            Поддерживаются JPG, PNG, WebP (до 5 МБ на файл, максимум 10 фото)
+          </p>
+        </div>
+      </div>
+
+      <!-- Images Grid (4 cols desktop, 2 cols mobile) -->
+      <div x-show="images.length > 0" class="mt-5">
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <template x-for="(img, idx) in images" :key="img.id">
+            <div
+              draggable="true"
+              @dragstart="onCardDragStart(idx)"
+              @dragover.prevent="onCardDragOver(idx)"
+              @drop.prevent="onCardDrop(idx)"
+              @dragend="onCardDragEnd()"
+              class="group relative aspect-square rounded-[6px] overflow-hidden border border-border bg-gray-50 shadow-2xs transition-all cursor-move select-none"
+              :class="{
+                'ring-2 ring-primary border-primary': idx === 0,
+                'opacity-40 scale-95 border-dashed border-gray-400': draggedCardIndex === idx
+              }"
+            >
+              <!-- Thumbnail Image -->
+              <img
+                :src="img.previewUrl"
+                :alt="img.name"
+                class="w-full h-full object-cover pointer-events-none"
+              />
+
+              <!-- Main Badge (on index 0) -->
+              <template x-if="idx === 0">
+                <div class="absolute top-2 left-2 bg-[#EF1C24] text-white text-[10px] font-bold px-2 py-0.5 rounded shadow-sm flex items-center gap-1 pointer-events-none">
+                  <svg class="w-3 h-3 fill-current" viewBox="0 0 20 20">
+                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                  </svg>
+                  Главное
+                </div>
+              </template>
+
+              <!-- Order Number Badge (on index > 0) -->
+              <template x-if="idx > 0">
+                <div class="absolute top-2 left-2 bg-black/60 backdrop-blur-2xs text-white text-[10px] font-mono px-1.5 py-0.5 rounded pointer-events-none">
+                  #<span x-text="idx + 1"></span>
+                </div>
+              </template>
+
+              <!-- Delete Button -->
+              <button
+                type="button"
+                @click.stop="removeImage(idx)"
+                class="absolute top-2 right-2 w-6 h-6 rounded-full bg-black/60 hover:bg-[#EF1C24] text-white flex items-center justify-center text-xs transition-colors cursor-pointer z-10"
+                title="Удалить фото"
+              >
+                ×
+              </button>
+
+              <!-- Set as Main Button Overlay (shown on hover if not main) -->
+              <template x-if="idx > 0">
+                <div class="absolute inset-x-0 bottom-0 p-2 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                  <button
+                    type="button"
+                    @click.stop="setMainImage(idx)"
+                    class="w-full py-1 px-2 rounded bg-white text-gray-900 hover:bg-red-50 hover:text-primary text-[11px] font-semibold transition-colors cursor-pointer shadow-xs"
+                  >
+                    Сделать главным
+                  </button>
+                </div>
+              </template>
+            </div>
+          </template>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: ОПИСАНИЕ -->
     <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
       <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-blue-500"></span>
@@ -330,7 +444,7 @@ const isEdit = Boolean(productId);
       </div>
     </div>
 
-    <!-- SECTION 3: НАСТРОЙКИ -->
+    <!-- SECTION 4: НАСТРОЙКИ -->
     <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
       <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -418,6 +532,9 @@ const isEdit = Boolean(productId);
       tagInput: '',
       categories: [],
       errors: {},
+      images: [], // array of { id, name, file, previewUrl, isExisting, rawFileName, fullUrl }
+      isDraggingOver: false,
+      draggedCardIndex: null,
 
       form: {
         name: '',
@@ -485,6 +602,24 @@ const isEdit = Boolean(productId);
           this.form.is_featured = record.is_featured || false;
           this.form.sort_order = record.sort_order || 0;
 
+          // Populate existing images
+          const rawImages = Array.isArray(record.images)
+            ? record.images
+            : (record.images ? [record.images] : []);
+
+          this.images = rawImages.map((imgName, idx) => {
+            const fileUrl = `${pbUrl}/api/files/products/${record.id}/${imgName}`;
+            return {
+              id: `existing_${idx}_${imgName}`,
+              name: imgName,
+              file: null,
+              previewUrl: `${fileUrl}?thumb=300x300`,
+              fullUrl: fileUrl,
+              isExisting: true,
+              rawFileName: imgName
+            };
+          });
+
           // Set editor content
           this.$nextTick(() => {
             if (this.$refs.editor) {
@@ -499,6 +634,87 @@ const isEdit = Boolean(productId);
         }
       },
 
+      // --- Image Upload & Validation Handlers ---
+      handleFileInput(event) {
+        const files = Array.from(event.target.files || []);
+        this.processFiles(files);
+        event.target.value = ''; // reset
+      },
+
+      handleDrop(event) {
+        this.isDraggingOver = false;
+        const files = Array.from(event.dataTransfer.files || []);
+        this.processFiles(files);
+      },
+
+      processFiles(files) {
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+        const maxSize = 5 * 1024 * 1024; // 5 MB
+
+        for (const file of files) {
+          if (this.images.length >= 10) {
+            this.emitToast('Максимальное количество изображений — 10', 'error');
+            break;
+          }
+
+          if (!allowedTypes.includes(file.type)) {
+            this.emitToast(`Недопустимый формат "${file.name}". Разрешены только JPG, PNG, WebP`, 'error');
+            continue;
+          }
+
+          if (file.size > maxSize) {
+            this.emitToast(`Файл "${file.name}" превышает 5 МБ`, 'error');
+            continue;
+          }
+
+          const blobUrl = URL.createObjectURL(file);
+          this.images.push({
+            id: `new_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            name: file.name,
+            file: file,
+            previewUrl: blobUrl,
+            fullUrl: blobUrl,
+            isExisting: false,
+          });
+        }
+      },
+
+      removeImage(index) {
+        const item = this.images[index];
+        if (item && !item.isExisting && item.previewUrl && item.previewUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+        this.images.splice(index, 1);
+      },
+
+      setMainImage(index) {
+        if (index === 0) return;
+        const [item] = this.images.splice(index, 1);
+        this.images.unshift(item);
+        this.emitToast('Главное изображение обновлено', 'info');
+      },
+
+      // --- Drag-and-Drop Image Reordering ---
+      onCardDragStart(index) {
+        this.draggedCardIndex = index;
+      },
+
+      onCardDragOver(index) {
+        // Required to allow drop
+      },
+
+      onCardDrop(targetIndex) {
+        if (this.draggedCardIndex === null || this.draggedCardIndex === targetIndex) return;
+        const [draggedItem] = this.images.splice(this.draggedCardIndex, 1);
+        this.images.splice(targetIndex, 0, draggedItem);
+        this.draggedCardIndex = null;
+      },
+
+      onCardDragEnd() {
+        this.draggedCardIndex = null;
+      },
+
+      // --- Product Name & Slug Handlers ---
       onNameInput() {
         delete this.errors.name;
         if (!this.isEdit && !this.slugTouched) {
@@ -621,24 +837,40 @@ const isEdit = Boolean(productId);
             this.form.description = this.$refs.editor.innerHTML;
           }
 
-          const payload = {
-            name: this.form.name.trim(),
-            slug: this.form.slug.trim(),
-            category: this.form.category || null,
-            short_description: this.form.short_description.trim(),
-            description: this.form.description || '',
-            tags: this.form.tags || [],
-            is_active: Boolean(this.form.is_active),
-            is_featured: Boolean(this.form.is_featured),
-            sort_order: Number(this.form.sort_order) || 0,
-          };
+          // Build FormData for multipart payload
+          const formData = new FormData();
+          formData.append('name', this.form.name.trim());
+          formData.append('slug', this.form.slug.trim());
+          formData.append('category', this.form.category || '');
+          formData.append('short_description', this.form.short_description.trim());
+          formData.append('description', this.form.description || '');
+          formData.append('tags', JSON.stringify(this.form.tags || []));
+          formData.append('is_active', String(Boolean(this.form.is_active)));
+          formData.append('is_featured', String(Boolean(this.form.is_featured)));
+          formData.append('sort_order', String(Number(this.form.sort_order) || 0));
+
+          // Append images in their exact reordered sequence
+          for (const img of this.images) {
+            if (img.file) {
+              formData.append('images', img.file, img.name);
+            } else if (img.isExisting && img.fullUrl) {
+              // Fetch existing image blob to preserve order and content
+              try {
+                const resp = await fetch(img.fullUrl);
+                const blob = await resp.blob();
+                formData.append('images', blob, img.name);
+              } catch (err) {
+                console.warn('Could not fetch existing image blob:', img.name, err);
+              }
+            }
+          }
 
           let record;
           if (this.productId) {
-            record = await this.pb.collection('products').update(this.productId, payload);
+            record = await this.pb.collection('products').update(this.productId, formData);
             this.emitToast('Товар успешно сохранен', 'success');
           } else {
-            record = await this.pb.collection('products').create(payload);
+            record = await this.pb.collection('products').create(formData);
             this.productId = record.id;
             this.isEdit = true;
             this.emitToast('Товар успешно создан', 'success');
