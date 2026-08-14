@@ -405,13 +405,13 @@ const isEdit = Boolean(productId);
   </div>
 </div>
 
-<!-- Product Form Alpine Script -->
-<script is:inline define:vars={{ productId, isEdit, PB_URL }}>
-  function productForm(id, pbUrl) {
+<!-- Global Product Form Alpine Script -->
+<script is:inline>
+  window.productForm = function(id, pbUrl) {
     return {
       pb: null,
       productId: id || '',
-      isEdit: isEdit,
+      isEdit: Boolean(id),
       loading: false,
       saving: false,
       slugTouched: false,
@@ -432,11 +432,7 @@ const isEdit = Boolean(productId);
       },
 
       async init() {
-        if (window.PocketBase) {
-          this.pb = new window.PocketBase(pbUrl);
-          this.pb.autoCancellation(false);
-        }
-
+        this.initPb(pbUrl);
         await this.loadCategories();
 
         if (this.productId) {
@@ -444,9 +440,19 @@ const isEdit = Boolean(productId);
         }
       },
 
+      initPb(url) {
+        if (window.PocketBase) {
+          this.pb = new window.PocketBase(url);
+          this.pb.autoCancellation(false);
+          this.pb.authStore.loadFromCookie(document.cookie);
+        }
+      },
+
       async loadCategories() {
         try {
+          if (!this.pb) this.initPb(pbUrl);
           if (!this.pb) return;
+
           const list = await this.pb.collection('categories').getFullList({
             sort: 'parent,name',
             $autoCancel: false,
@@ -461,10 +467,8 @@ const isEdit = Boolean(productId);
       async loadProductData() {
         this.loading = true;
         try {
-          if (!this.pb) {
-            this.pb = new window.PocketBase(pbUrl);
-            this.pb.autoCancellation(false);
-          }
+          if (!this.pb) this.initPb(pbUrl);
+          if (!this.pb) return;
 
           const record = await this.pb.collection('products').getOne(this.productId, {
             $autoCancel: false,
@@ -482,9 +486,11 @@ const isEdit = Boolean(productId);
           this.form.sort_order = record.sort_order || 0;
 
           // Set editor content
-          if (this.$refs.editor) {
-            this.$refs.editor.innerHTML = this.form.description;
-          }
+          this.$nextTick(() => {
+            if (this.$refs.editor) {
+              this.$refs.editor.innerHTML = this.form.description;
+            }
+          });
         } catch (e) {
           console.error('Error loading product record:', e);
           this.emitToast('Ошибка загрузки данных товара', 'error');
@@ -515,9 +521,9 @@ const isEdit = Boolean(productId);
         }).join('');
 
         result = result
-          .replace(/[^a-z0-9-_]/g, '-') // replace spaces & punctuation with hyphens
-          .replace(/-+/g, '-')          // collapse multiple hyphens
-          .replace(/^-|-$/g, '');       // trim hyphens
+          .replace(/[^a-z0-9-_]/g, '-')
+          .replace(/-+/g, '-')
+          .replace(/^-|-$/g, '');
 
         this.form.slug = result;
       },
@@ -575,10 +581,7 @@ const isEdit = Boolean(productId);
 
         // 4. Check slug uniqueness in PocketBase
         try {
-          if (!this.pb) {
-            this.pb = new window.PocketBase(pbUrl);
-            this.pb.autoCancellation(false);
-          }
+          if (!this.pb) this.initPb(pbUrl);
 
           let filterQuery = `slug = "${this.form.slug.trim()}"`;
           if (this.productId) {
@@ -611,10 +614,7 @@ const isEdit = Boolean(productId);
 
         this.saving = true;
         try {
-          if (!this.pb) {
-            this.pb = new window.PocketBase(pbUrl);
-            this.pb.autoCancellation(false);
-          }
+          if (!this.pb) this.initPb(pbUrl);
 
           // Read latest editor HTML
           if (this.$refs.editor) {
@@ -642,7 +642,6 @@ const isEdit = Boolean(productId);
             this.productId = record.id;
             this.isEdit = true;
             this.emitToast('Товар успешно создан', 'success');
-            // Update browser history URL
             window.history.replaceState(null, '', `/manage/products/${record.id}`);
           }
 
@@ -668,6 +667,7 @@ const isEdit = Boolean(productId);
 
         this.saving = true;
         try {
+          if (!this.pb) this.initPb(pbUrl);
           await this.pb.collection('products').delete(this.productId);
           this.emitToast('Товар удален', 'success');
           setTimeout(() => {
@@ -686,5 +686,5 @@ const isEdit = Boolean(productId);
         }));
       }
     };
-  }
+  };
 </script>

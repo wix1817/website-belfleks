@@ -345,9 +345,9 @@ import { PB_URL } from '../../../lib/adminAuth';
     </div>
   </div>
 
-  <!-- Alpine Products Component Logic -->
-  <script is:inline define:vars={{ PB_URL }}>
-    function productsManager(pbUrl) {
+  <!-- Global Alpine Component Registration -->
+  <script is:inline>
+    window.productsManager = function(pbUrl) {
       return {
         pb: null,
         products: [],
@@ -366,17 +366,24 @@ import { PB_URL } from '../../../lib/adminAuth';
         toastTimeout: null,
 
         async init() {
-          if (window.PocketBase) {
-            this.pb = new window.PocketBase(pbUrl);
-            this.pb.autoCancellation(false);
-          }
+          this.initPb(pbUrl);
           await this.loadCategories();
           await this.loadProducts();
         },
 
+        initPb(url) {
+          if (window.PocketBase) {
+            this.pb = new window.PocketBase(url);
+            this.pb.autoCancellation(false);
+            this.pb.authStore.loadFromCookie(document.cookie);
+          }
+        },
+
         async loadCategories() {
           try {
+            if (!this.pb) this.initPb(pbUrl);
             if (!this.pb) return;
+
             const list = await this.pb.collection('categories').getFullList({
               sort: 'parent,name',
               $autoCancel: false,
@@ -395,13 +402,11 @@ import { PB_URL } from '../../../lib/adminAuth';
         async loadProducts() {
           this.loading = true;
           try {
-            if (!this.pb) {
-              this.pb = new window.PocketBase(pbUrl);
-              this.pb.autoCancellation(false);
-            }
+            if (!this.pb) this.initPb(pbUrl);
+            if (!this.pb) return;
 
             const filterParts = [];
-            if (this.search.trim()) {
+            if (this.search && this.search.trim()) {
               filterParts.push(`name ~ "${this.search.trim()}"`);
             }
             if (this.categoryFilter) {
@@ -488,16 +493,17 @@ import { PB_URL } from '../../../lib/adminAuth';
         async toggleActive(prod) {
           const newState = !prod.is_active;
           const oldState = prod.is_active;
-          prod.is_active = newState; // Optimistic update
+          prod.is_active = newState;
 
           try {
+            if (!this.pb) this.initPb(pbUrl);
             await this.pb.collection('products').update(prod.id, {
               is_active: newState
             });
             this.showToast(newState ? 'Товар активирован' : 'Товар деактивирован');
           } catch (e) {
             console.error('Error toggling product status:', e);
-            prod.is_active = oldState; // Rollback
+            prod.is_active = oldState;
             this.showToast('Не удалось обновить статус', 'error');
           }
         },
@@ -508,9 +514,9 @@ import { PB_URL } from '../../../lib/adminAuth';
           }
 
           try {
+            if (!this.pb) this.initPb(pbUrl);
             await this.pb.collection('products').delete(prod.id);
             this.showToast('Товар успешно удален');
-            // If deleting last item on current page, go back 1 page if possible
             if (this.products.length === 1 && this.page > 1) {
               this.page -= 1;
             }
@@ -530,6 +536,6 @@ import { PB_URL } from '../../../lib/adminAuth';
           }, 3000);
         }
       };
-    }
+    };
   </script>
 </AdminLayout>
