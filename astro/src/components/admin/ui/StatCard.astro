@@ -1,0 +1,92 @@
+---
+interface Props {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  href?: string;
+  icon?: string;
+  color?: 'green' | 'red' | 'blue' | 'gray';
+}
+
+const {
+  title,
+  value,
+  subtitle,
+  href,
+  icon,
+  color = 'gray',
+} = Astro.props;
+
+const colorClasses = {
+  red: {
+    bg: 'bg-red-50',
+    text: 'text-[#EF1C24]',
+    hoverBg: 'group-hover:bg-[#EF1C24]',
+    hoverText: 'group-hover:text-white',
+    hoverBorder: 'hover:border-[#EF1C24]/30',
+  },
+  blue: {
+    bg: 'bg-blue-50',
+    text: 'text-blue-600',
+    hoverBg: 'group-hover:bg-blue-600',
+    hoverText: 'group-hover:text-white',
+    hoverBorder: 'hover:border-blue-400/30',
+  },
+  green: {
+    bg: 'bg-green-50',
+    text: 'text-green-600',
+    hoverBg: 'group-hover:bg-green-600',
+    hoverText: 'group-hover:text-white',
+    hoverBorder: 'hover:border-green-400/30',
+  },
+  gray: {
+    bg: 'bg-gray-100',
+    text: 'text-gray-600',
+    hoverBg: 'group-hover:bg-gray-700',
+    hoverText: 'group-hover:text-white',
+    hoverBorder: 'hover:border-gray-300',
+  },
+}[color];
+
+const Tag = href ? 'a' : 'div';
+---
+
+<Tag
+  href={href}
+  class:list={[
+    'bg-white rounded-[8px] p-6 border border-border shadow-xs flex flex-col justify-between transition-all duration-200 group',
+    href ? `cursor-pointer hover:shadow-md ${colorClasses.hoverBorder}` : ''
+  ]}
+>
+  <div class="flex items-start justify-between gap-4 mb-3">
+    <span class="font-sans font-semibold text-[14px] text-[#515151] block leading-snug">
+      {title}
+    </span>
+    {icon && (
+      <div class:list={[
+        'w-10 h-10 rounded-[8px] flex items-center justify-center flex-shrink-0 transition-colors',
+        colorClasses.bg,
+        colorClasses.text,
+        href ? `${colorClasses.hoverBg} ${colorClasses.hoverText}` : ''
+      ]}>
+        <Fragment set:html={icon} />
+      </div>
+    )}
+  </div>
+
+  <div>
+    <div class="font-accent font-bold italic text-[36px] leading-tight text-text-primary group-hover:text-[#EF1C24] transition-colors">
+      {value}
+    </div>
+    {subtitle && (
+      <div class="text-xs text-text-secondary font-medium mt-1.5 flex items-center justify-between">
+        <span>{subtitle}</span>
+        {href && (
+          <span class="text-primary text-[11px] font-semibold opacity-0 group-hover:opacity-100 transition-opacity">
+            Перейти →
+          </span>
+        )}
+      </div>
+    )}
+  </div>
+</Tag>

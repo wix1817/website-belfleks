@@ -18,6 +18,7 @@ export const PB_URL = import.meta.env.PUBLIC_PB_URL || 'http://127.0.0.1:8090';
  */
 export function createAdminPb(cookieHeader?: string): PocketBase {
   const pb = new PocketBase(PB_URL);
+  pb.autoCancellation(false); // disable autocancellation for SSR parallel queries
   if (cookieHeader) {
     pb.authStore.loadFromCookie(cookieHeader);
   }

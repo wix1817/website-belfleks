@@ -1,6 +1,7 @@
 ---
 import AdminLayout from '../../layouts/AdminLayout.astro';
-import { requireAuth, createAdminPb } from '../../lib/adminAuth';
+import StatCard from '../../components/admin/ui/StatCard.astro';
+import { requireAuth } from '../../lib/adminAuth';
 
 const authResult = requireAuth(Astro);
 if (authResult instanceof Response) {
@@ -9,134 +10,252 @@ if (authResult instanceof Response) {
 
 const { manager, pb } = authResult;
 
-// Fetch quick stats for dashboard
-let productsCount = 0;
-let categoriesCount = 0;
-let documentsCount = 0;
+let totalProducts = 0;
+let activeProducts = 0;
+let inactiveProducts = 0;
+let leads7Days = 0;
+let totalCategories = 0;
+let totalDocuments = 0;
+let recentLeads: any[] = [];
+let loadError: string | null = null;
 
 try {
-  const [prods, cats, docs] = await Promise.all([
-    pb.collection('products').getList(1, 1),
-    pb.collection('categories').getList(1, 1),
-    pb.collection('documents').getList(1, 1),
+  // Calculate date 7 days ago in UTC format for PocketBase
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const date7daysAgoStr = sevenDaysAgo.toISOString().replace('T', ' ').slice(0, 19);
+
+  const [
+    allProds,
+    actProds,
+    inactProds,
+    leadsWeek,
+    cats,
+    docs,
+    leadsList
+  ] = await Promise.all([
+    pb.collection('products').getList(1, 1, { $autoCancel: false, requestKey: null }),
+    pb.collection('products').getList(1, 1, { filter: 'is_active = true', $autoCancel: false, requestKey: null }).catch(() => ({ totalItems: 0 })),
+    pb.collection('products').getList(1, 1, { filter: 'is_active = false', $autoCancel: false, requestKey: null }).catch(() => ({ totalItems: 0 })),
+    pb.collection('contacts').getList(1, 1, { filter: `created >= "${date7daysAgoStr}"`, $autoCancel: false, requestKey: null }).catch(() => ({ totalItems: 0 })),
+    pb.collection('categories').getList(1, 1, { $autoCancel: false, requestKey: null }).catch(() => ({ totalItems: 0 })),
+    pb.collection('documents').getList(1, 1, { $autoCancel: false, requestKey: null }).catch(() => ({ totalItems: 0 })),
+    pb.collection('contacts').getList(1, 5, { sort: '-created', $autoCancel: false, requestKey: null }).catch(() => ({ items: [] }))
   ]);
-  productsCount = prods.totalItems;
-  categoriesCount = cats.totalItems;
-  documentsCount = docs.totalItems;
-} catch (e) {
-  console.error('Error fetching dashboard stats:', e);
+
+  totalProducts = allProds.totalItems;
+  activeProducts = actProds.totalItems;
+  inactiveProducts = inactProds.totalItems;
+  leads7Days = leadsWeek.totalItems;
+  totalCategories = cats.totalItems;
+  totalDocuments = docs.totalItems;
+  recentLeads = leadsList.items || [];
+} catch (e: any) {
+  console.error('Error fetching dashboard data:', e);
+  loadError = 'Ошибка загрузки данных из базы данных. Проверьте подключение к PocketBase.';
 }
 ---
 
 <AdminLayout title="Панель управления | БелФлекс" activeNav="dashboard">
-  <!-- Page Header -->
-  <div class="mb-8">
-    <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight">Панель управления</h1>
-    <p class="text-sm text-gray-500 mt-1">Добро пожаловать в административную панель сайта ООО «БелФлекс».</p>
+  <!-- Page Header & Quick Actions -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+    <div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-accent italic">
+        Панель управления
+      </h1>
+      <p class="text-sm text-text-secondary mt-1 font-sans">
+        Сводка показателей и оперативное управление сайтом ООО «БелФлекс».
+      </p>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="flex flex-wrap items-center gap-2.5">
+      <a
+        href="/manage/products?action=new"
+        class="inline-flex items-center gap-1.5 bg-[#EF1C24] hover:bg-[#d91920] text-white font-sans text-xs font-semibold py-2.5 px-4 rounded-[8px] transition-colors shadow-xs"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+        + Добавить товар
+      </a>
+      <a
+        href="/manage/leads"
+        class="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-700 font-sans text-xs font-semibold py-2.5 px-4 rounded-[8px] border border-border transition-colors shadow-xs"
+      >
+        <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+        </svg>
+        Все заявки
+      </a>
+      <a
+        href="/manage/settings"
+        class="inline-flex items-center gap-1.5 bg-white hover:bg-gray-50 text-gray-700 font-sans text-xs font-semibold py-2.5 px-4 rounded-[8px] border border-border transition-colors shadow-xs"
+      >
+        <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+        Редактировать контакты
+      </a>
+    </div>
   </div>
 
-  <!-- Quick Stats Grid -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-    <!-- Products Stat Card -->
-    <a
+  <!-- Error Alert Banner (if any) -->
+  {loadError && (
+    <div class="mb-6 p-4 bg-red-50 border border-red-200 rounded-[8px] flex items-center gap-3 text-red-700 text-sm">
+      <svg class="w-5 h-5 flex-shrink-0 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      <span>{loadError}</span>
+    </div>
+  )}
+
+  <!-- 2x2 Desktop Grid of Stat Widgets -->
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <!-- 1. Товаров -->
+    <StatCard
+      title="Товаров"
+      value={totalProducts}
+      subtitle={`Активных: ${activeProducts} / Неактивных: ${inactiveProducts}`}
       href="/manage/products"
-      class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs hover:border-[#EF1C24]/40 hover:shadow-md transition-all group flex items-center justify-between"
-    >
-      <div>
-        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Товары в каталоге</span>
-        <div class="text-3xl font-bold text-gray-900 group-hover:text-[#EF1C24] transition-colors">{productsCount}</div>
-        <span class="text-xs text-gray-500 mt-1 block">Активные позиции</span>
-      </div>
-      <div class="w-12 h-12 rounded-xl bg-red-50 text-[#EF1C24] flex items-center justify-center group-hover:bg-[#EF1C24] group-hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-        </svg>
-      </div>
-    </a>
+      color="red"
+      icon={`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>`}
+    />
 
-    <!-- Categories Stat Card -->
-    <a
+    <!-- 2. Заявок за 7 дней -->
+    <StatCard
+      title="Заявок за 7 дней"
+      value={leads7Days}
+      subtitle="Посмотреть все"
+      href="/manage/leads"
+      color="blue"
+      icon={`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>`}
+    />
+
+    <!-- 3. Категорий -->
+    <StatCard
+      title="Категорий"
+      value={totalCategories}
+      subtitle="Категории и подкатегории"
       href="/manage/categories"
-      class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs hover:border-[#EF1C24]/40 hover:shadow-md transition-all group flex items-center justify-between"
-    >
-      <div>
-        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">Категории и разделы</span>
-        <div class="text-3xl font-bold text-gray-900 group-hover:text-[#EF1C24] transition-colors">{categoriesCount}</div>
-        <span class="text-xs text-gray-500 mt-1 block">Структура каталога</span>
-      </div>
-      <div class="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/>
-        </svg>
-      </div>
-    </a>
+      color="green"
+      icon={`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>`}
+    />
 
-    <!-- Documents Stat Card -->
-    <a
+    <!-- 4. PDF Документов -->
+    <StatCard
+      title="PDF Документов"
+      value={totalDocuments}
+      subtitle="Каталоги и сертификаты"
       href="/manage/documents"
-      class="bg-white p-6 rounded-2xl border border-gray-200 shadow-xs hover:border-[#EF1C24]/40 hover:shadow-md transition-all group flex items-center justify-between"
-    >
-      <div>
-        <span class="text-xs font-semibold text-gray-400 uppercase tracking-wider block mb-1">PDF Документы</span>
-        <div class="text-3xl font-bold text-gray-900 group-hover:text-[#EF1C24] transition-colors">{documentsCount}</div>
-        <span class="text-xs text-gray-500 mt-1 block">Каталоги и сертификаты</span>
-      </div>
-      <div class="w-12 h-12 rounded-xl bg-green-50 text-green-600 flex items-center justify-center group-hover:bg-green-600 group-hover:text-white transition-colors">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-        </svg>
-      </div>
-    </a>
+      color="gray"
+      icon={`<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>`}
+    />
   </div>
 
-  <!-- Manager Info & Quick Actions -->
-  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs">
-      <h2 class="text-lg font-bold text-gray-900 mb-4">Текущая сессия</h2>
-      <div class="space-y-3 text-sm">
-        <div class="flex justify-between py-2 border-b border-gray-100">
-          <span class="text-gray-500">Пользователь:</span>
-          <span class="font-semibold text-gray-800">{manager.name || 'Менеджер'}</span>
-        </div>
-        <div class="flex justify-between py-2 border-b border-gray-100">
-          <span class="text-gray-500">Email:</span>
-          <span class="font-mono text-gray-800">{manager.email}</span>
-        </div>
-        <div class="flex justify-between py-2 border-b border-gray-100">
-          <span class="text-gray-500">Роль:</span>
-          <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-800 capitalize">
-            {manager.role || 'manager'}
-          </span>
-        </div>
-        <div class="flex justify-between py-2">
-          <span class="text-gray-500">База данных:</span>
-          <span class="text-green-600 font-medium flex items-center gap-1.5 text-xs">
-            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            PocketBase подключен
-          </span>
-        </div>
+  <!-- Recent Leads Section -->
+  <div class="bg-white rounded-[8px] border border-border shadow-xs overflow-hidden">
+    <div class="p-6 border-b border-border flex items-center justify-between">
+      <div>
+        <h2 class="text-base font-bold text-gray-900 font-sans">Последние заявки</h2>
+        <p class="text-xs text-text-secondary mt-0.5 font-sans">Обращения клиентов через формы на сайте</p>
       </div>
+      <a
+        href="/manage/leads"
+        class="text-xs font-semibold text-[#EF1C24] hover:text-[#d91920] transition-colors inline-flex items-center gap-1"
+      >
+        Все заявки ({leads7Days}) →
+      </a>
     </div>
 
-    <div class="bg-white rounded-2xl border border-gray-200 p-6 shadow-xs flex flex-col justify-between">
-      <div>
-        <h2 class="text-lg font-bold text-gray-900 mb-2">Быстрый переход</h2>
-        <p class="text-sm text-gray-500 mb-4">Выберите раздел для редактирования контента или просмотра структуры сайта.</p>
+    {recentLeads.length > 0 ? (
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm font-sans">
+          <thead class="bg-[#F7FAFC] text-[#515151] uppercase text-xs font-semibold border-b border-border">
+            <tr>
+              <th scope="col" class="px-6 py-3.5">Клиент</th>
+              <th scope="col" class="px-6 py-3.5">Контакты</th>
+              <th scope="col" class="px-6 py-3.5">Сообщение / Запрос</th>
+              <th scope="col" class="px-6 py-3.5">Дата</th>
+              <th scope="col" class="px-6 py-3.5 text-right">Действие</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border">
+            {recentLeads.map((lead) => {
+              const formattedDate = lead.created
+                ? new Date(lead.created).toLocaleDateString('ru-RU', {
+                    day: '2-digit',
+                    month: '2-digit',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })
+                : '—';
+
+              return (
+                <tr class="hover:bg-[#F7FAFC]/60 transition-colors">
+                  <td class="px-6 py-4">
+                    <div class="font-semibold text-gray-900">{lead.name || 'Аноним'}</div>
+                    {lead.company && <div class="text-xs text-gray-500 mt-0.5">{lead.company}</div>}
+                  </td>
+                  <td class="px-6 py-4">
+                    {lead.phone && (
+                      <div class="font-medium text-gray-900 text-xs">
+                        <a href={`tel:${lead.phone}`} class="hover:text-primary transition-colors">
+                          {lead.phone}
+                        </a>
+                      </div>
+                    )}
+                    {lead.email && (
+                      <div class="text-xs text-gray-500 mt-0.5">
+                        <a href={`mailto:${lead.email}`} class="hover:text-primary transition-colors">
+                          {lead.email}
+                        </a>
+                      </div>
+                    )}
+                  </td>
+                  <td class="px-6 py-4">
+                    <p class="text-xs text-gray-700 max-w-md line-clamp-2 leading-relaxed">
+                      {lead.message || 'Заявка с сайта'}
+                    </p>
+                    {lead.source && (
+                      <span class="inline-block mt-1 text-[10px] bg-gray-100 text-gray-600 px-2 py-0.5 rounded font-medium">
+                        {lead.source}
+                      </span>
+                    )}
+                  </td>
+                  <td class="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">
+                    {formattedDate}
+                  </td>
+                  <td class="px-6 py-4 text-right">
+                    {lead.phone ? (
+                      <a
+                        href={`tel:${lead.phone}`}
+                        class="inline-flex items-center gap-1 py-1.5 px-3 bg-red-50 text-[#EF1C24] hover:bg-[#EF1C24] hover:text-white rounded-[6px] text-xs font-semibold transition-colors"
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                        </svg>
+                        Позвонить
+                      </a>
+                    ) : (
+                      <span class="text-xs text-gray-400">—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
-      <div class="grid grid-cols-2 gap-3">
-        <a
-          href="/manage/products"
-          class="py-2.5 px-4 bg-gray-50 hover:bg-[#EF1C24] hover:text-white text-gray-700 rounded-xl text-xs font-semibold transition-colors text-center border border-gray-200"
-        >
-          Управление товарами →
-        </a>
-        <a
-          href="/manage/documents"
-          class="py-2.5 px-4 bg-gray-50 hover:bg-[#EF1C24] hover:text-white text-gray-700 rounded-xl text-xs font-semibold transition-colors text-center border border-gray-200"
-        >
-          Управление документами →
-        </a>
+    ) : (
+      <div class="text-center py-12 px-4">
+        <svg class="w-12 h-12 mx-auto text-gray-300 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+        </svg>
+        <p class="text-sm font-medium text-gray-900">Заявок пока нет</p>
+        <p class="text-xs text-gray-500 mt-1">Новые заявки с форм сайта появятся здесь в режиме реального времени.</p>
       </div>
-    </div>
+    )}
   </div>
 </AdminLayout>
