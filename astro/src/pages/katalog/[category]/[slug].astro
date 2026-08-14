@@ -412,18 +412,27 @@ const colLabels: Record<string, string> = {
             )}
 
             <!-- Technical specifications table -->
-            {productData.specifications && Object.keys(productData.specifications).length > 0 && (
+            {productData.specifications && (Array.isArray(productData.specifications) ? productData.specifications.length > 0 : Object.keys(productData.specifications).length > 0) && (
               <div class="mb-8">
                 <h2 class="text-xl font-bold text-text-primary mb-4 font-accent italic">Технические характеристики</h2>
                 <div class="bg-white rounded-xl border border-border overflow-hidden">
                   <table class="w-full text-sm text-left">
                     <tbody class="divide-y divide-border">
-                      {Object.entries(productData.specifications).map(([key, val], idx) => (
-                        <tr class={idx % 2 === 0 ? 'bg-white' : 'bg-bg-secondary/30'}>
-                          <td class="px-4 py-3 font-medium text-text-secondary w-1/2">{colLabels[key] || key}</td>
-                          <td class="px-4 py-3 text-text-primary font-semibold">{String(val)}</td>
-                        </tr>
-                      ))}
+                      {Array.isArray(productData.specifications) ? (
+                        productData.specifications.map((spec: any, idx: number) => (
+                          <tr class={idx % 2 === 0 ? 'bg-white' : 'bg-bg-secondary/30'}>
+                            <td class="px-4 py-3 font-medium text-text-secondary w-2/5 sm:w-1/3">{spec.label || spec.name || ''}</td>
+                            <td class="px-4 py-3 text-text-primary font-semibold whitespace-pre-line">{spec.value || ''}</td>
+                          </tr>
+                        ))
+                      ) : (
+                        Object.entries(productData.specifications).map(([key, val], idx) => (
+                          <tr class={idx % 2 === 0 ? 'bg-white' : 'bg-bg-secondary/30'}>
+                            <td class="px-4 py-3 font-medium text-text-secondary w-2/5 sm:w-1/3">{colLabels[key] || key}</td>
+                            <td class="px-4 py-3 text-text-primary font-semibold whitespace-pre-line">{String(val)}</td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
