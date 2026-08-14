@@ -708,7 +708,260 @@ const isEdit = Boolean(productId);
       </div>
     </div>
 
-    <!-- SECTION 5: ОПИСАНИЕ -->
+    <!-- SECTION 5: СВЯЗАННЫЕ ТОВАРЫ (UPSELL & CROSS-SELL) -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-1 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+        Связанные товары (Upsell / Cross-sell)
+      </h2>
+      <p class="text-xs text-text-secondary mb-5">
+        Настройте товары, которые рекомендуются на детальной странице данного рукава (фитинги, хомуты, соединения или сопутствующие рукава).
+      </p>
+
+      <template x-if="!isEdit">
+        <div class="p-4 bg-gray-50 border border-border rounded-[8px] text-xs text-gray-500 flex items-center gap-2">
+          <svg class="w-4 h-4 text-gray-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Сохраните товар, чтобы настроить связанные товары (Upsell и Cross-sell).</span>
+        </div>
+      </template>
+
+      <template x-if="isEdit">
+        <div class="space-y-6">
+          <!-- Блок 1: С этим товаром используют (Upsell) -->
+          <div>
+            <label class="block text-sm font-semibold text-gray-800 mb-1">
+              С этим товаром используют (Upsell)
+            </label>
+            <p class="text-xs text-text-secondary mb-2">
+              Рекомендуемые аксессуары, хомуты, быстроразъемные соединения (БРС) и фитинги.
+            </p>
+
+            <!-- Search autocomplete input -->
+            <div class="relative" @click.outside="upsellDropdownOpen = false">
+              <input
+                type="text"
+                x-model.debounce.300ms="upsellQuery"
+                @input="searchUpsell()"
+                @focus="if (upsellQuery.length >= 3) upsellDropdownOpen = true"
+                placeholder="Поиск товара для добавления (введите 3+ символа)..."
+                class="w-full bg-[#F7FAFC] border border-border focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-xs sm:text-sm text-gray-900 transition-all"
+              />
+
+              <!-- Search Results Dropdown -->
+              <div
+                x-show="upsellDropdownOpen && (upsellResults.length > 0 || upsellLoading)"
+                x-cloak
+                class="absolute left-0 right-0 top-full mt-1 bg-white border border-border rounded-[8px] shadow-lg max-h-60 overflow-y-auto z-30 divide-y divide-border"
+              >
+                <div x-show="upsellLoading" class="p-3 text-center text-xs text-gray-400">
+                  Поиск товаров...
+                </div>
+                <template x-for="item in upsellResults" :key="item.id">
+                  <div
+                    @click="addUpsell(item)"
+                    class="p-2.5 hover:bg-red-50/40 transition-colors flex items-center justify-between cursor-pointer"
+                  >
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded bg-gray-100 border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        <template x-if="item.images && item.images.length > 0">
+                          <img :src="`${pbUrl}/api/files/products/${item.id}/${item.images[0]}?thumb=100x100`" class="w-full h-full object-cover" />
+                        </template>
+                      </div>
+                      <div>
+                        <div class="text-xs font-semibold text-gray-900" x-text="item.name"></div>
+                        <div class="text-[10px] text-gray-400 font-mono" x-text="item.slug"></div>
+                      </div>
+                    </div>
+                    <span class="text-xs text-primary font-semibold">+ Добавить</span>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Selected Upsells Chips -->
+            <div class="flex flex-wrap items-center gap-2 mt-3">
+              <template x-for="(prod, uIdx) in selectedUpsells" :key="prod.id">
+                <span class="inline-flex items-center gap-2 py-1.5 pl-2.5 pr-2 bg-gray-50 border border-border text-gray-800 rounded-[6px] text-xs font-medium shadow-2xs">
+                  <span x-text="prod.name"></span>
+                  <button
+                    type="button"
+                    @click="removeUpsell(uIdx)"
+                    class="w-4 h-4 rounded-full hover:bg-red-100 hover:text-[#EF1C24] text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </span>
+              </template>
+              <span x-show="selectedUpsells.length === 0" class="text-xs text-gray-400 italic">
+                Товары еще не выбраны
+              </span>
+            </div>
+          </div>
+
+          <!-- Блок 2: Рекомендуем также (Cross-sell) -->
+          <div class="pt-4 border-t border-border">
+            <label class="block text-sm font-semibold text-gray-800 mb-1">
+              Рекомендуем также (Cross-sell)
+            </label>
+            <p class="text-xs text-text-secondary mb-2">
+              Альтернативные или сопутствующие рукава других серий и диаметров.
+            </p>
+
+            <!-- Search autocomplete input -->
+            <div class="relative" @click.outside="crossellDropdownOpen = false">
+              <input
+                type="text"
+                x-model.debounce.300ms="crossellQuery"
+                @input="searchCrossell()"
+                @focus="if (crossellQuery.length >= 3) crossellDropdownOpen = true"
+                placeholder="Поиск товара для добавления (введите 3+ символа)..."
+                class="w-full bg-[#F7FAFC] border border-border focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-xs sm:text-sm text-gray-900 transition-all"
+              />
+
+              <!-- Search Results Dropdown -->
+              <div
+                x-show="crossellDropdownOpen && (crossellResults.length > 0 || crossellLoading)"
+                x-cloak
+                class="absolute left-0 right-0 top-full mt-1 bg-white border border-border rounded-[8px] shadow-lg max-h-60 overflow-y-auto z-30 divide-y divide-border"
+              >
+                <div x-show="crossellLoading" class="p-3 text-center text-xs text-gray-400">
+                  Поиск товаров...
+                </div>
+                <template x-for="item in crossellResults" :key="item.id">
+                  <div
+                    @click="addCrossell(item)"
+                    class="p-2.5 hover:bg-red-50/40 transition-colors flex items-center justify-between cursor-pointer"
+                  >
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded bg-gray-100 border border-border overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        <template x-if="item.images && item.images.length > 0">
+                          <img :src="`${pbUrl}/api/files/products/${item.id}/${item.images[0]}?thumb=100x100`" class="w-full h-full object-cover" />
+                        </template>
+                      </div>
+                      <div>
+                        <div class="text-xs font-semibold text-gray-900" x-text="item.name"></div>
+                        <div class="text-[10px] text-gray-400 font-mono" x-text="item.slug"></div>
+                      </div>
+                    </div>
+                    <span class="text-xs text-primary font-semibold">+ Добавить</span>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Selected Crossells Chips -->
+            <div class="flex flex-wrap items-center gap-2 mt-3">
+              <template x-for="(prod, cIdx) in selectedCrossells" :key="prod.id">
+                <span class="inline-flex items-center gap-2 py-1.5 pl-2.5 pr-2 bg-gray-50 border border-border text-gray-800 rounded-[6px] text-xs font-medium shadow-2xs">
+                  <span x-text="prod.name"></span>
+                  <button
+                    type="button"
+                    @click="removeCrossell(cIdx)"
+                    class="w-4 h-4 rounded-full hover:bg-red-100 hover:text-[#EF1C24] text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </span>
+              </template>
+              <span x-show="selectedCrossells.length === 0" class="text-xs text-gray-400 italic">
+                Товары еще не выбраны
+              </span>
+            </div>
+          </div>
+        </div>
+      </template>
+    </div>
+
+    <!-- SECTION 6: FAQ (ЧАСТО ЗАДАВАЕМЫЕ ВОПРОСЫ) -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+        <h2 class="text-base font-bold text-gray-900 font-sans flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
+          Часто задаваемые вопросы (FAQ)
+        </h2>
+        <span class="text-xs text-text-secondary font-mono" x-text="faqList.length + ' вопр.'"></span>
+      </div>
+      <p class="text-xs text-text-secondary mb-4">
+        Добавьте популярные вопросы и ответы по эксплуатации, сертификатам или доставке данного товара.
+      </p>
+
+      <div class="border border-[#EDF2F7] rounded-[8px] overflow-hidden bg-white">
+        <div class="divide-y divide-[#EDF2F7]">
+          <template x-for="(item, fIdx) in faqList" :key="item.id">
+            <div
+              draggable="true"
+              @dragstart="onFaqDragStart(fIdx)"
+              @dragover.prevent="onFaqDragOver(fIdx)"
+              @drop.prevent="onFaqDrop(fIdx)"
+              @dragend="onFaqDragEnd()"
+              class="p-4 hover:bg-[#F7FAFC] transition-colors space-y-3 relative group"
+              :class="{ 'opacity-40 bg-gray-100': draggedFaqIndex === fIdx }"
+            >
+              <div class="flex items-center justify-between gap-2">
+                <div class="flex items-center gap-2 flex-grow">
+                  <!-- Drag handle -->
+                  <div class="cursor-grab text-gray-400 hover:text-gray-600 flex-shrink-0" title="Перетащите для изменения порядка">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path d="M7 4a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0zM7 16a2 2 0 11-4 0 2 2 0 014 0zM17 4a2 2 0 11-4 0 2 2 0 014 0zM17 10a2 2 0 11-4 0 2 2 0 014 0zM17 16a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                  </div>
+                  <span class="text-xs font-bold text-primary">Вопрос #<span x-text="fIdx + 1"></span>:</span>
+                  <input
+                    type="text"
+                    x-model="item.question"
+                    placeholder="например: Какая гарантия предоставляется на данный рукав?"
+                    class="w-full bg-white border border-[#EDF2F7] focus:border-primary focus:ring-1 focus:ring-primary rounded-[6px] py-1.5 px-3 text-xs sm:text-sm font-semibold text-gray-900 placeholder-gray-400"
+                  />
+                </div>
+                <!-- Delete Button -->
+                <button
+                  type="button"
+                  @click="removeFaq(fIdx)"
+                  class="p-1.5 text-gray-400 hover:text-[#EF1C24] hover:bg-red-50 rounded-[6px] transition-colors cursor-pointer flex-shrink-0"
+                  title="Удалить вопрос"
+                >
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Answer textarea -->
+              <div class="pl-6">
+                <textarea
+                  rows="2"
+                  x-model="item.answer"
+                  @input="autoResize($el)"
+                  placeholder="Ответ: Гарантийный срок составляет 12 месяцев со дня ввода в эксплуатацию при соблюдении правил монтажа..."
+                  class="w-full bg-white border border-[#EDF2F7] focus:border-primary focus:ring-1 focus:ring-primary rounded-[6px] p-2.5 text-xs sm:text-sm text-gray-800 min-h-[58px] resize-y placeholder-gray-400 leading-relaxed"
+                ></textarea>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div x-show="faqList.length === 0" class="p-8 text-center text-gray-400 text-xs">
+          Вопросы еще не добавлены.
+        </div>
+      </div>
+
+      <div class="mt-3.5">
+        <button
+          type="button"
+          @click="addFaq()"
+          class="inline-flex items-center gap-1.5 py-2 px-4 rounded-[6px] border border-dashed border-gray-300 hover:border-primary bg-white hover:bg-red-50/20 text-gray-700 hover:text-primary text-xs font-semibold font-sans transition-all cursor-pointer shadow-2xs"
+        >
+          <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+          </svg>
+          + Добавить вопрос
+        </button>
+      </div>
+    </div>
+
+    <!-- SECTION 7: ОПИСАНИЕ -->
     <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
       <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-blue-500"></span>
@@ -825,7 +1078,98 @@ const isEdit = Boolean(productId);
       </div>
     </div>
 
-    <!-- SECTION 6: НАСТРОЙКИ -->
+    <!-- SECTION 8: ПОИСКОВАЯ ОПТИМИЗАЦИЯ (SEO & LIVE SERP PREVIEW) -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-1 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-orange-500"></span>
+        Поисковая оптимизация (SEO)
+      </h2>
+      <p class="text-xs text-text-secondary mb-5">
+        Настройка мета-тегов для поисковых систем (Яндекс, Google).
+      </p>
+
+      <div class="space-y-5">
+        <!-- Meta Title -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="meta-title" class="block text-sm font-medium text-[#3B3B3B]">
+              Meta Title (Заголовок страницы)
+            </label>
+            <span
+              class="text-xs font-mono"
+              :class="form.meta_title.length > 60 ? 'text-orange-600 font-semibold' : 'text-gray-400'"
+              x-text="form.meta_title.length + '/60'"
+            ></span>
+          </div>
+          <input
+            id="meta-title"
+            type="text"
+            x-model="form.meta_title"
+            placeholder="например: Рукав пищевой Dionysus EF 10 BAR — купить в Беларуси | БелФлекс"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all"
+          />
+          <p class="text-[11px] text-text-secondary mt-1">
+            Если поле не заполнено, будет автоматически сгенерирован заголовок из названия товара.
+          </p>
+        </div>
+
+        <!-- Meta Description -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="meta-desc" class="block text-sm font-medium text-[#3B3B3B]">
+              Meta Description (Краткое описание для поисковиков)
+            </label>
+            <span
+              class="text-xs font-mono"
+              :class="form.meta_description.length > 160 ? 'text-orange-600 font-semibold' : 'text-gray-400'"
+              x-text="form.meta_description.length + '/160'"
+            ></span>
+          </div>
+          <textarea
+            id="meta-desc"
+            rows="3"
+            x-model="form.meta_description"
+            placeholder="например: Промышленный напорно-всасывающий рукав для пищевых продуктов. Рабочее давление 10 бар. Доставка по Беларуси со склада в Гродно..."
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-sm text-gray-900 transition-all resize-y"
+          ></textarea>
+        </div>
+
+        <!-- Live Google SERP Snippet Preview -->
+        <div class="p-4 bg-[#F8F9FA] rounded-[8px] border border-[#DADCE0] mt-4">
+          <div class="text-[11px] font-bold text-gray-500 uppercase tracking-wider mb-2.5 flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+            </svg>
+            Предпросмотр в поисковой выдаче Google (SERP)
+          </div>
+
+          <div class="bg-white p-4 rounded-[6px] border border-gray-200 shadow-2xs font-sans max-w-2xl">
+            <!-- Google Breadcrumb / URL line -->
+            <div class="flex items-center gap-2 text-xs mb-1">
+              <div class="w-4 h-4 rounded-full bg-[#EF1C24] text-white text-[9px] font-bold flex items-center justify-center flex-shrink-0">
+                Б
+              </div>
+              <div class="truncate text-[#202124] text-xs">
+                <span class="font-medium">ООО «БелФлекс»</span>
+                <span class="text-[#5f6368] text-[11px]"> › katalog › <span x-text="form.slug || 'slug-tovara'"></span></span>
+              </div>
+            </div>
+
+            <!-- Google Title Line -->
+            <h4 class="text-base sm:text-lg text-[#1a0dab] hover:underline cursor-pointer font-medium leading-snug truncate">
+              <span x-text="form.meta_title ? form.meta_title : (form.name ? form.name + ' — ООО «БелФлекс»' : 'Название товара — ООО «БелФлекс»')"></span>
+            </h4>
+
+            <!-- Google Snippet Description Line -->
+            <p class="text-xs sm:text-sm text-[#4d5156] leading-relaxed mt-1 line-clamp-2">
+              <span x-text="form.meta_description ? form.meta_description : (form.short_description ? form.short_description : 'Официальные поставки промышленных рукавов и соединений со склада в Гродно. Сертификаты соответствия, доставка по всей Беларуси...')"></span>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 9: НАСТРОЙКИ ПУБЛИКАЦИИ -->
     <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
       <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
         <span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -1047,6 +1391,22 @@ const isEdit = Boolean(productId);
       addColModalOpen: false,
       newColLabel: '',
 
+      // Upsell & Cross-sell
+      selectedUpsells: [], // array of { id, name, slug, image }
+      selectedCrossells: [], // array of { id, name, slug, image }
+      upsellQuery: '',
+      upsellResults: [],
+      upsellLoading: false,
+      upsellDropdownOpen: false,
+      crossellQuery: '',
+      crossellResults: [],
+      crossellLoading: false,
+      crossellDropdownOpen: false,
+
+      // FAQ
+      faqList: [], // array of { id, question, answer }
+      draggedFaqIndex: null,
+
       form: {
         name: '',
         slug: '',
@@ -1054,6 +1414,8 @@ const isEdit = Boolean(productId);
         short_description: '',
         description: '',
         tags: [],
+        meta_title: '',
+        meta_description: '',
         is_active: true,
         is_featured: false,
         sort_order: 0,
@@ -1111,6 +1473,7 @@ const isEdit = Boolean(productId);
           if (!this.pb) return;
 
           const record = await this.pb.collection('products').getOne(this.productId, {
+            expand: 'upsell,crossell',
             $autoCancel: false,
             requestKey: null
           });
@@ -1121,6 +1484,8 @@ const isEdit = Boolean(productId);
           this.form.short_description = record.short_description || '';
           this.form.description = record.description || '';
           this.form.tags = Array.isArray(record.tags) ? record.tags : [];
+          this.form.meta_title = record.meta_title || '';
+          this.form.meta_description = record.meta_description || '';
           this.form.is_active = record.is_active !== undefined ? record.is_active : true;
           this.form.is_featured = record.is_featured || false;
           this.form.sort_order = record.sort_order || 0;
@@ -1167,6 +1532,25 @@ const isEdit = Boolean(productId);
             this.resetToDefaultColumns();
           }
 
+          // Populate Upsell & Cross-sell
+          if (record.expand?.upsell) {
+            const upsells = Array.isArray(record.expand.upsell) ? record.expand.upsell : [record.expand.upsell];
+            this.selectedUpsells = upsells.map(u => ({ id: u.id, name: u.name, slug: u.slug }));
+          }
+          if (record.expand?.crossell) {
+            const crossells = Array.isArray(record.expand.crossell) ? record.expand.crossell : [record.expand.crossell];
+            this.selectedCrossells = crossells.map(c => ({ id: c.id, name: c.name, slug: c.slug }));
+          }
+
+          // Populate FAQ
+          if (record.faq && Array.isArray(record.faq)) {
+            this.faqList = record.faq.map((f, idx) => ({
+              id: `faq_${idx}_${Date.now()}`,
+              question: f.question || '',
+              answer: f.answer || ''
+            }));
+          }
+
           // Set editor content
           this.$nextTick(() => {
             if (this.$refs.editor) {
@@ -1181,9 +1565,117 @@ const isEdit = Boolean(productId);
         }
       },
 
+      // --- Upsell & Cross-sell Search and Management ---
+      async searchUpsell() {
+        if (this.upsellQuery.length < 3) {
+          this.upsellResults = [];
+          this.upsellDropdownOpen = false;
+          return;
+        }
+
+        this.upsellLoading = true;
+        this.upsellDropdownOpen = true;
+        try {
+          if (!this.pb) this.initPb(pbUrl);
+          const filter = `name ~ "${this.upsellQuery.trim()}"${this.productId ? ` && id != "${this.productId}"` : ''}`;
+          const res = await this.pb.collection('products').getList(1, 8, {
+            filter: filter,
+            $autoCancel: false,
+            requestKey: null
+          });
+          this.upsellResults = res.items || [];
+        } catch (e) {
+          console.error('Upsell search error:', e);
+        } finally {
+          this.upsellLoading = false;
+        }
+      },
+
+      addUpsell(item) {
+        if (!this.selectedUpsells.some(u => u.id === item.id)) {
+          this.selectedUpsells.push({ id: item.id, name: item.name, slug: item.slug });
+          this.emitToast(`Товар "${item.name}" добавлен в Upsell`, 'success');
+        }
+        this.upsellQuery = '';
+        this.upsellDropdownOpen = false;
+      },
+
+      removeUpsell(index) {
+        this.selectedUpsells.splice(index, 1);
+      },
+
+      async searchCrossell() {
+        if (this.crossellQuery.length < 3) {
+          this.crossellResults = [];
+          this.crossellDropdownOpen = false;
+          return;
+        }
+
+        this.crossellLoading = true;
+        this.crossellDropdownOpen = true;
+        try {
+          if (!this.pb) this.initPb(pbUrl);
+          const filter = `name ~ "${this.crossellQuery.trim()}"${this.productId ? ` && id != "${this.productId}"` : ''}`;
+          const res = await this.pb.collection('products').getList(1, 8, {
+            filter: filter,
+            $autoCancel: false,
+            requestKey: null
+          });
+          this.crossellResults = res.items || [];
+        } catch (e) {
+          console.error('Crossell search error:', e);
+        } finally {
+          this.crossellLoading = false;
+        }
+      },
+
+      addCrossell(item) {
+        if (!this.selectedCrossells.some(c => c.id === item.id)) {
+          this.selectedCrossells.push({ id: item.id, name: item.name, slug: item.slug });
+          this.emitToast(`Товар "${item.name}" добавлен в Cross-sell`, 'success');
+        }
+        this.crossellQuery = '';
+        this.crossellDropdownOpen = false;
+      },
+
+      removeCrossell(index) {
+        this.selectedCrossells.splice(index, 1);
+      },
+
+      // --- FAQ Management ---
+      addFaq(q = '', a = '') {
+        this.faqList.push({
+          id: `faq_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`,
+          question: q,
+          answer: a
+        });
+      },
+
+      removeFaq(index) {
+        this.faqList.splice(index, 1);
+      },
+
+      onFaqDragStart(index) {
+        this.draggedFaqIndex = index;
+      },
+
+      onFaqDragOver(index) {
+        // Needed for drop
+      },
+
+      onFaqDrop(targetIndex) {
+        if (this.draggedFaqIndex === null || this.draggedFaqIndex === targetIndex) return;
+        const [item] = this.faqList.splice(this.draggedFaqIndex, 1);
+        this.faqList.splice(targetIndex, 0, item);
+        this.draggedFaqIndex = null;
+      },
+
+      onFaqDragEnd() {
+        this.draggedFaqIndex = null;
+      },
+
       // --- Diameter Table Management ---
       loadDiameterTableData(dataRows) {
-        // Collect all unique column keys
         const colKeyMap = {};
         const colLabelsDict = {
           diameter_mm: 'Диаметр, мм',
@@ -1229,7 +1721,6 @@ const isEdit = Boolean(productId);
         if (this.tableRows.length === 0) {
           this.addTableRow();
         } else {
-          // Normalize existing rows to new columns
           this.tableRows.forEach(r => {
             this.tableColumns.forEach(c => {
               if (r[c.key] === undefined) r[c.key] = '';
@@ -1282,7 +1773,6 @@ const isEdit = Boolean(productId);
           key: key
         });
 
-        // Add key to all existing rows
         this.tableRows.forEach(r => {
           r[key] = '';
         });
@@ -1383,7 +1873,6 @@ const isEdit = Boolean(productId);
           return;
         }
 
-        // Parse headers
         const headerLine = lines[0];
         const delimiter = headerLine.includes('\t') ? '\t' : (headerLine.includes(';') ? ';' : ',');
         const headers = headerLine.split(delimiter).map(h => h.trim().replace(/^["']|["']$/g, ''));
@@ -1399,7 +1888,6 @@ const isEdit = Boolean(productId);
           key: this.labelToColumnKey(h)
         }));
 
-        // Parse rows
         const newRows = [];
         for (let i = 1; i < lines.length; i++) {
           const cells = lines[i].split(delimiter).map(c => c.trim().replace(/^["']|["']$/g, ''));
@@ -1463,7 +1951,7 @@ const isEdit = Boolean(productId);
       },
 
       onSpecDragOver(index) {
-        // Required for HTML5 drop
+        // Required for drop
       },
 
       onSpecDrop(targetIndex) {
@@ -1544,7 +2032,6 @@ const isEdit = Boolean(productId);
         this.emitToast('Главное изображение обновлено', 'info');
       },
 
-      // --- Drag-and-Drop Image Reordering ---
       onCardDragStart(index) {
         this.draggedCardIndex = index;
       },
@@ -1716,6 +2203,14 @@ const isEdit = Boolean(productId);
               return rowData;
             });
 
+          // Clean FAQ list
+          const cleanedFaq = this.faqList
+            .filter(f => (f.question && f.question.trim()) || (f.answer && f.answer.trim()))
+            .map(f => ({
+              question: f.question.trim(),
+              answer: f.answer.trim()
+            }));
+
           // Build FormData for multipart payload
           const formData = new FormData();
           formData.append('name', this.form.name.trim());
@@ -1726,16 +2221,35 @@ const isEdit = Boolean(productId);
           formData.append('tags', JSON.stringify(this.form.tags || []));
           formData.append('specifications', JSON.stringify(cleanedSpecs));
           formData.append('diameter_table', JSON.stringify(cleanedTable));
+          formData.append('faq', JSON.stringify(cleanedFaq));
+          formData.append('meta_title', this.form.meta_title ? this.form.meta_title.trim() : '');
+          formData.append('meta_description', this.form.meta_description ? this.form.meta_description.trim() : '');
           formData.append('is_active', String(Boolean(this.form.is_active)));
           formData.append('is_featured', String(Boolean(this.form.is_featured)));
           formData.append('sort_order', String(Number(this.form.sort_order) || 0));
+
+          // Append upsell and crossell relation IDs
+          if (this.selectedUpsells.length > 0) {
+            this.selectedUpsells.forEach(u => {
+              formData.append('upsell', u.id);
+            });
+          } else {
+            formData.append('upsell', '');
+          }
+
+          if (this.selectedCrossells.length > 0) {
+            this.selectedCrossells.forEach(c => {
+              formData.append('crossell', c.id);
+            });
+          } else {
+            formData.append('crossell', '');
+          }
 
           // Append images in their exact reordered sequence
           for (const img of this.images) {
             if (img.file) {
               formData.append('images', img.file, img.name);
             } else if (img.isExisting && img.fullUrl) {
-              // Fetch existing image blob to preserve order and content
               try {
                 const resp = await fetch(img.fullUrl);
                 const blob = await resp.blob();
