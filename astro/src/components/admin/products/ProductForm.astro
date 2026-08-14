@@ -1,0 +1,690 @@
+---
+import Toast from '../ui/Toast.astro';
+import { PB_URL } from '../../../lib/adminAuth';
+
+interface Props {
+  productId?: string;
+}
+
+const { productId = '' } = Astro.props;
+const isEdit = Boolean(productId);
+---
+
+<div
+  x-data={`productForm('${productId}', '${PB_URL}')`}
+  x-init="init()"
+  class="space-y-6"
+>
+  <Toast />
+
+  <!-- Action Bar & Breadcrumbs -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-border">
+    <div>
+      <div class="flex items-center gap-2 text-xs text-text-secondary mb-1 font-sans">
+        <a href="/manage/products" class="hover:text-primary transition-colors">Товары</a>
+        <span>/</span>
+        <span class="text-gray-900 font-semibold" x-text="isEdit ? (form.name ? form.name : 'Редактирование товара') : 'Новый товар'"></span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight font-accent italic">
+        {isEdit ? 'Редактирование товара' : 'Создание товара'}
+      </h1>
+    </div>
+
+    <!-- Buttons -->
+    <div class="flex flex-wrap items-center gap-2.5">
+      <a
+        href="/manage/products"
+        class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold font-sans transition-colors cursor-pointer"
+      >
+        Отмена
+      </a>
+
+      <template x-if="isEdit">
+        <button
+          type="button"
+          @click="deleteProduct()"
+          :disabled="saving"
+          class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-red-200 bg-red-50 text-[#EF1C24] hover:bg-[#EF1C24] hover:text-white text-xs font-semibold font-sans transition-colors cursor-pointer disabled:opacity-50"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+          Удалить
+        </button>
+      </template>
+
+      <button
+        type="button"
+        @click="save(false)"
+        :disabled="saving"
+        class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-800 hover:bg-gray-50 text-xs font-semibold font-sans transition-colors cursor-pointer shadow-xs disabled:opacity-50"
+      >
+        <template x-if="saving">
+          <svg class="animate-spin h-3.5 w-3.5 text-gray-600" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </template>
+        Сохранить и продолжить
+      </button>
+
+      <button
+        type="button"
+        @click="save(true)"
+        :disabled="saving"
+        class="inline-flex items-center gap-1.5 py-2.5 px-5 rounded-[8px] bg-[#EF1C24] hover:bg-[#d91920] active:scale-[0.99] text-white text-xs font-semibold font-sans transition-all shadow-xs cursor-pointer disabled:opacity-50"
+      >
+        <template x-if="saving">
+          <svg class="animate-spin h-3.5 w-3.5 text-white" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+        </template>
+        Сохранить
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State Indicator -->
+  <div
+    x-show="loading"
+    x-cloak
+    class="py-20 text-center text-primary font-medium text-sm flex items-center justify-center gap-2"
+  >
+    <svg class="animate-spin h-5 w-5 text-primary" fill="none" viewBox="0 0 24 24">
+      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+    </svg>
+    <span>Загрузка данных товара...</span>
+  </div>
+
+  <!-- Form Sections -->
+  <div x-show="!loading" class="space-y-6">
+    <!-- SECTION 1: ОСНОВНОЕ -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-[#EF1C24]"></span>
+        Основное
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+        <!-- Название -->
+        <div class="md:col-span-2">
+          <label for="product-name" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Название товара <span class="text-[#EF1C24]">*</span>
+          </label>
+          <input
+            id="product-name"
+            type="text"
+            x-model="form.name"
+            @input="onNameInput()"
+            placeholder="например: Рукав пищевой Dionysus EF 10 BAR"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all"
+            :class="{ 'border-[#EF1C24] bg-red-50/20': errors.name }"
+          />
+          <template x-if="errors.name">
+            <p class="text-[#EF1C24] text-[12px] mt-1 font-medium" x-text="errors.name"></p>
+          </template>
+        </div>
+
+        <!-- Slug -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="product-slug" class="block text-sm font-medium text-[#3B3B3B]">
+              URL Slug <span class="text-[#EF1C24]">*</span>
+            </label>
+            <button
+              type="button"
+              @click="generateSlug()"
+              class="text-xs text-primary hover:text-[#d91920] font-semibold transition-colors cursor-pointer"
+            >
+              Сгенерировать
+            </button>
+          </div>
+          <input
+            id="product-slug"
+            type="text"
+            x-model="form.slug"
+            @input="slugTouched = true; delete errors.slug"
+            placeholder="rukav-pischevoy-dionysus-ef"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm font-mono text-gray-900 transition-all"
+            :class="{ 'border-[#EF1C24] bg-red-50/20': errors.slug }"
+          />
+          <template x-if="errors.slug">
+            <p class="text-[#EF1C24] text-[12px] mt-1 font-medium" x-text="errors.slug"></p>
+          </template>
+          <p class="text-xs text-text-secondary mt-1 font-mono">
+            URL: /katalog/.../<span x-text="form.slug || 'slug'"></span>/
+          </p>
+        </div>
+
+        <!-- Категория -->
+        <div>
+          <label for="product-category" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Категория каталога
+          </label>
+          <select
+            id="product-category"
+            x-model="form.category"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2.5 px-3.5 text-sm text-gray-900 transition-all cursor-pointer"
+          >
+            <option value="">Без категории</option>
+            <template x-for="cat in categories" :key="cat.id">
+              <option :value="cat.id" x-text="(cat.parent ? '— ' : '') + cat.name"></option>
+            </template>
+          </select>
+        </div>
+
+        <!-- Теги (Chips) -->
+        <div class="md:col-span-2">
+          <label class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Теги и преимущества
+          </label>
+          <div class="bg-[#F7FAFC] border border-[#EDF2F7] focus-within:border-primary focus-within:ring-2 focus-within:ring-[#EF1C24]/20 focus-within:bg-white rounded-[8px] p-2.5 transition-all">
+            <!-- Chips List -->
+            <div class="flex flex-wrap items-center gap-2 mb-2">
+              <template x-for="(tag, idx) in form.tags" :key="idx">
+                <span class="inline-flex items-center gap-1.5 py-1 pl-2.5 pr-1.5 bg-white border border-border text-gray-800 rounded-full text-xs font-medium shadow-2xs">
+                  <span x-text="tag"></span>
+                  <button
+                    type="button"
+                    @click="removeTag(idx)"
+                    class="w-4 h-4 rounded-full hover:bg-red-50 hover:text-[#EF1C24] text-gray-400 flex items-center justify-center transition-colors cursor-pointer"
+                  >
+                    ×
+                  </button>
+                </span>
+              </template>
+            </div>
+            <!-- Tag Input -->
+            <input
+              type="text"
+              x-model="tagInput"
+              @keydown.enter.prevent="addTag()"
+              @keydown.,.prevent="addTag()"
+              placeholder="Введите тег и нажмите Enter..."
+              class="w-full bg-transparent border-0 p-1 text-xs sm:text-sm text-gray-900 focus:outline-none placeholder-gray-400"
+            />
+          </div>
+          <p class="text-xs text-text-secondary mt-1">
+            Например: <span class="italic text-gray-600">Пищевой, FDA, Маслостойкий, До 10 бар</span> (нажмите Enter для добавления).
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 2: ОПИСАНИЕ -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-blue-500"></span>
+        Описание товара
+      </h2>
+
+      <div class="space-y-5">
+        <!-- Краткое описание -->
+        <div>
+          <div class="flex items-center justify-between mb-1.5">
+            <label for="short-desc" class="block text-sm font-medium text-[#3B3B3B]">
+              Краткое описание (для карточек и сниппетов)
+            </label>
+            <span
+              class="text-xs font-mono"
+              :class="form.short_description.length > 160 ? 'text-[#EF1C24] font-bold' : 'text-gray-400'"
+              x-text="form.short_description.length + '/160'"
+            ></span>
+          </div>
+          <textarea
+            id="short-desc"
+            rows="2"
+            maxlength="160"
+            x-model="form.short_description"
+            placeholder="Краткое описание назначения и ключевых свойств рукава..."
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-sm text-gray-900 transition-all resize-y"
+            :class="{ 'border-[#EF1C24] bg-red-50/20': errors.short_description }"
+          ></textarea>
+          <template x-if="errors.short_description">
+            <p class="text-[#EF1C24] text-[12px] mt-1 font-medium" x-text="errors.short_description"></p>
+          </template>
+        </div>
+
+        <!-- Полное описание с легким Rich Text редактором -->
+        <div>
+          <label class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Полное описание и спецификация
+          </label>
+
+          <div class="border border-[#EDF2F7] rounded-[8px] overflow-hidden focus-within:border-primary focus-within:ring-2 focus-within:ring-[#EF1C24]/20 transition-all">
+            <!-- Toolbar -->
+            <div class="bg-gray-50 border-b border-[#EDF2F7] p-2 flex flex-wrap items-center gap-1">
+              <button
+                type="button"
+                @click="execFormat('bold')"
+                class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 font-bold text-xs min-w-[28px] h-7 flex items-center justify-center cursor-pointer transition-colors"
+                title="Жирный (Ctrl+B)"
+              >
+                B
+              </button>
+              <button
+                type="button"
+                @click="execFormat('italic')"
+                class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 italic text-xs min-w-[28px] h-7 flex items-center justify-center cursor-pointer transition-colors"
+                title="Курсив (Ctrl+I)"
+              >
+                I
+              </button>
+              <span class="w-px h-4 bg-gray-300 mx-1"></span>
+              <button
+                type="button"
+                @click="execFormat('formatBlock', '<h2>')"
+                class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 font-bold text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+                title="Заголовок H2"
+              >
+                H2
+              </button>
+              <button
+                type="button"
+                @click="execFormat('formatBlock', '<h3>')"
+                class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 font-bold text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+                title="Подзаголовок H3"
+              >
+                H3
+              </button>
+              <span class="w-px h-4 bg-gray-300 mx-1"></span>
+              <button
+                type="button"
+                @click="execFormat('insertUnorderedList')"
+                class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+                title="Маркированный список"
+              >
+                • Список
+              </button>
+              <button
+                type="button"
+                @click="insertLink()"
+                class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-700 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors"
+                title="Вставить ссылку"
+              >
+                🔗 Ссылка
+              </button>
+              <button
+                type="button"
+                @click="execFormat('removeFormat')"
+                class="p-1.5 rounded hover:bg-white hover:shadow-2xs text-gray-500 text-xs px-2 h-7 flex items-center justify-center cursor-pointer transition-colors ml-auto"
+                title="Очистить форматирование"
+              >
+                Очистить
+              </button>
+            </div>
+
+            <!-- Contenteditable Editor Zone -->
+            <div
+              x-ref="editor"
+              contenteditable="true"
+              @input="form.description = $el.innerHTML"
+              @blur="form.description = $el.innerHTML"
+              class="p-4 bg-white min-h-[220px] text-sm text-gray-900 focus:outline-none prose prose-sm max-w-none"
+              placeholder="Введите подробное описание товара..."
+            ></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION 3: НАСТРОЙКИ -->
+    <div class="bg-white rounded-[8px] p-6 border border-border shadow-xs">
+      <h2 class="text-base font-bold text-gray-900 font-sans mb-4 flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+        Настройки публикации
+      </h2>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Toggle: Активен -->
+        <div class="flex items-center justify-between p-3.5 bg-[#F7FAFC] rounded-[8px] border border-border">
+          <div>
+            <label class="block text-sm font-semibold text-gray-900 cursor-pointer" @click="form.is_active = !form.is_active">
+              Активен
+            </label>
+            <span class="text-xs text-text-secondary">Отображать в каталоге</span>
+          </div>
+          <button
+            type="button"
+            @click="form.is_active = !form.is_active"
+            :class="form.is_active ? 'bg-green-500' : 'bg-gray-300'"
+            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+            role="switch"
+            :aria-checked="form.is_active"
+          >
+            <span
+              :class="form.is_active ? 'translate-x-5' : 'translate-x-0'"
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+            ></span>
+          </button>
+        </div>
+
+        <!-- Toggle: Рекомендуемый -->
+        <div class="flex items-center justify-between p-3.5 bg-[#F7FAFC] rounded-[8px] border border-border">
+          <div>
+            <label class="block text-sm font-semibold text-gray-900 cursor-pointer" @click="form.is_featured = !form.is_featured">
+              Рекомендуемый
+            </label>
+            <span class="text-xs text-text-secondary">Показывать на главной</span>
+          </div>
+          <button
+            type="button"
+            @click="form.is_featured = !form.is_featured"
+            :class="form.is_featured ? 'bg-[#EF1C24]' : 'bg-gray-300'"
+            class="relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none"
+            role="switch"
+            :aria-checked="form.is_featured"
+          >
+            <span
+              :class="form.is_featured ? 'translate-x-5' : 'translate-x-0'"
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"
+            ></span>
+          </button>
+        </div>
+
+        <!-- Sort Order -->
+        <div>
+          <label for="sort-order" class="block text-sm font-medium text-[#3B3B3B] mb-1.5">
+            Порядок сортировки
+          </label>
+          <input
+            id="sort-order"
+            type="number"
+            x-model.number="form.sort_order"
+            min="0"
+            step="1"
+            placeholder="0"
+            class="w-full bg-[#F7FAFC] border border-[#EDF2F7] focus:border-primary focus:bg-white focus:ring-2 focus:ring-[#EF1C24]/20 rounded-[8px] py-2 px-3 text-sm text-gray-900 transition-all font-mono"
+          />
+          <p class="text-xs text-text-secondary mt-1">Чем меньше число, тем выше в списке.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Product Form Alpine Script -->
+<script is:inline define:vars={{ productId, isEdit, PB_URL }}>
+  function productForm(id, pbUrl) {
+    return {
+      pb: null,
+      productId: id || '',
+      isEdit: isEdit,
+      loading: false,
+      saving: false,
+      slugTouched: false,
+      tagInput: '',
+      categories: [],
+      errors: {},
+
+      form: {
+        name: '',
+        slug: '',
+        category: '',
+        short_description: '',
+        description: '',
+        tags: [],
+        is_active: true,
+        is_featured: false,
+        sort_order: 0,
+      },
+
+      async init() {
+        if (window.PocketBase) {
+          this.pb = new window.PocketBase(pbUrl);
+          this.pb.autoCancellation(false);
+        }
+
+        await this.loadCategories();
+
+        if (this.productId) {
+          await this.loadProductData();
+        }
+      },
+
+      async loadCategories() {
+        try {
+          if (!this.pb) return;
+          const list = await this.pb.collection('categories').getFullList({
+            sort: 'parent,name',
+            $autoCancel: false,
+            requestKey: null
+          });
+          this.categories = list;
+        } catch (e) {
+          console.error('Error loading categories:', e);
+        }
+      },
+
+      async loadProductData() {
+        this.loading = true;
+        try {
+          if (!this.pb) {
+            this.pb = new window.PocketBase(pbUrl);
+            this.pb.autoCancellation(false);
+          }
+
+          const record = await this.pb.collection('products').getOne(this.productId, {
+            $autoCancel: false,
+            requestKey: null
+          });
+
+          this.form.name = record.name || '';
+          this.form.slug = record.slug || '';
+          this.form.category = record.category || '';
+          this.form.short_description = record.short_description || '';
+          this.form.description = record.description || '';
+          this.form.tags = Array.isArray(record.tags) ? record.tags : [];
+          this.form.is_active = record.is_active !== undefined ? record.is_active : true;
+          this.form.is_featured = record.is_featured || false;
+          this.form.sort_order = record.sort_order || 0;
+
+          // Set editor content
+          if (this.$refs.editor) {
+            this.$refs.editor.innerHTML = this.form.description;
+          }
+        } catch (e) {
+          console.error('Error loading product record:', e);
+          this.emitToast('Ошибка загрузки данных товара', 'error');
+        } finally {
+          this.loading = false;
+        }
+      },
+
+      onNameInput() {
+        delete this.errors.name;
+        if (!this.isEdit && !this.slugTouched) {
+          this.generateSlug();
+        }
+      },
+
+      generateSlug() {
+        const text = this.form.name || '';
+        const ruMap = {
+          'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+          'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+          'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+          'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'shch',
+          'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya'
+        };
+
+        let result = text.toLowerCase().split('').map(char => {
+          return ruMap[char] !== undefined ? ruMap[char] : char;
+        }).join('');
+
+        result = result
+          .replace(/[^a-z0-9-_]/g, '-') // replace spaces & punctuation with hyphens
+          .replace(/-+/g, '-')          // collapse multiple hyphens
+          .replace(/^-|-$/g, '');       // trim hyphens
+
+        this.form.slug = result;
+      },
+
+      addTag() {
+        const val = this.tagInput.trim().replace(/^,+|,+$/g, '');
+        if (!val) return;
+        if (!this.form.tags.includes(val)) {
+          this.form.tags.push(val);
+        }
+        this.tagInput = '';
+      },
+
+      removeTag(index) {
+        this.form.tags.splice(index, 1);
+      },
+
+      execFormat(cmd, val = null) {
+        document.execCommand(cmd, false, val);
+        if (this.$refs.editor) {
+          this.form.description = this.$refs.editor.innerHTML;
+        }
+      },
+
+      insertLink() {
+        const url = prompt('Введите URL ссылки (например: https://example.com):');
+        if (url) {
+          this.execFormat('createLink', url);
+        }
+      },
+
+      async validate() {
+        this.errors = {};
+
+        // 1. Name is required
+        if (!this.form.name.trim()) {
+          this.errors.name = 'Название товара обязательно для заполнения';
+        }
+
+        // 2. Slug is required and format
+        if (!this.form.slug.trim()) {
+          this.errors.slug = 'Slug обязателен';
+        } else if (!/^[a-z0-9-_]+$/i.test(this.form.slug.trim())) {
+          this.errors.slug = 'Slug может содержать только латинские буквы, цифры, дефис и подчеркивание';
+        }
+
+        // 3. Short description length
+        if (this.form.short_description && this.form.short_description.length > 160) {
+          this.errors.short_description = 'Длина краткого описания не может превышать 160 символов';
+        }
+
+        if (Object.keys(this.errors).length > 0) {
+          return false;
+        }
+
+        // 4. Check slug uniqueness in PocketBase
+        try {
+          if (!this.pb) {
+            this.pb = new window.PocketBase(pbUrl);
+            this.pb.autoCancellation(false);
+          }
+
+          let filterQuery = `slug = "${this.form.slug.trim()}"`;
+          if (this.productId) {
+            filterQuery += ` && id != "${this.productId}"`;
+          }
+
+          const existing = await this.pb.collection('products').getList(1, 1, {
+            filter: filterQuery,
+            $autoCancel: false,
+            requestKey: null
+          });
+
+          if (existing.totalItems > 0) {
+            this.errors.slug = 'Товар с таким URL Slug уже существует. Измените slug.';
+            return false;
+          }
+        } catch (e) {
+          console.error('Error verifying slug uniqueness:', e);
+        }
+
+        return true;
+      },
+
+      async save(redirectAfter = true) {
+        const isValid = await this.validate();
+        if (!isValid) {
+          this.emitToast('Пожалуйста, исправьте ошибки в форме', 'error');
+          return;
+        }
+
+        this.saving = true;
+        try {
+          if (!this.pb) {
+            this.pb = new window.PocketBase(pbUrl);
+            this.pb.autoCancellation(false);
+          }
+
+          // Read latest editor HTML
+          if (this.$refs.editor) {
+            this.form.description = this.$refs.editor.innerHTML;
+          }
+
+          const payload = {
+            name: this.form.name.trim(),
+            slug: this.form.slug.trim(),
+            category: this.form.category || null,
+            short_description: this.form.short_description.trim(),
+            description: this.form.description || '',
+            tags: this.form.tags || [],
+            is_active: Boolean(this.form.is_active),
+            is_featured: Boolean(this.form.is_featured),
+            sort_order: Number(this.form.sort_order) || 0,
+          };
+
+          let record;
+          if (this.productId) {
+            record = await this.pb.collection('products').update(this.productId, payload);
+            this.emitToast('Товар успешно сохранен', 'success');
+          } else {
+            record = await this.pb.collection('products').create(payload);
+            this.productId = record.id;
+            this.isEdit = true;
+            this.emitToast('Товар успешно создан', 'success');
+            // Update browser history URL
+            window.history.replaceState(null, '', `/manage/products/${record.id}`);
+          }
+
+          if (redirectAfter) {
+            setTimeout(() => {
+              window.location.href = '/manage/products';
+            }, 600);
+          }
+        } catch (e) {
+          console.error('Error saving product:', e);
+          const msg = e?.response?.message || e?.message || 'Не удалось сохранить товар';
+          this.emitToast(msg, 'error');
+        } finally {
+          this.saving = false;
+        }
+      },
+
+      async deleteProduct() {
+        if (!this.productId) return;
+        if (!confirm(`Вы действительно хотите удалить товар "${this.form.name}"?`)) {
+          return;
+        }
+
+        this.saving = true;
+        try {
+          await this.pb.collection('products').delete(this.productId);
+          this.emitToast('Товар удален', 'success');
+          setTimeout(() => {
+            window.location.href = '/manage/products';
+          }, 500);
+        } catch (e) {
+          console.error('Error deleting product:', e);
+          this.emitToast('Ошибка при удалении товара', 'error');
+          this.saving = false;
+        }
+      },
+
+      emitToast(message, type = 'success') {
+        window.dispatchEvent(new CustomEvent('admin-toast', {
+          detail: { message, type }
+        }));
+      }
+    };
+  }
+</script>
