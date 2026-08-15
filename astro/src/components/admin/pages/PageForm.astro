@@ -73,8 +73,16 @@ const { pageId } = Astro.props;
       </div>
     </div>
 
-    <!-- Buttons -->
+    <!-- Buttons & Dirty Indicator -->
     <div class="flex flex-wrap items-center gap-2.5">
+      <!-- Unsaved Changes Badge -->
+      <template x-if="isDirty">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold animate-pulse shadow-2xs">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span>Несохранённые изменения</span>
+        </span>
+      </template>
+
       <a
         href="/manage/pages"
         class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold font-sans transition-colors cursor-pointer"
@@ -519,6 +527,26 @@ const { pageId } = Astro.props;
         return `/${this.form.slug}`;
       },
 
+      // Dirty state tracking
+      isDirty: false,
+      initialDataHash: '',
+
+      calculateHash() {
+        return JSON.stringify({
+          form: this.form
+        });
+      },
+
+      takeSnapshot() {
+        this.initialDataHash = this.calculateHash();
+        this.isDirty = false;
+      },
+
+      checkDirty() {
+        if (!this.initialDataHash) return;
+        this.isDirty = this.calculateHash() !== this.initialDataHash;
+      },
+
       async init() {
         this.initPb(this.pbUrl);
         await this.loadPageData();
@@ -530,6 +558,23 @@ const { pageId } = Astro.props;
         this.autoSaveTimer = setInterval(() => {
           this.autoSaveDraft();
         }, 30000);
+
+        this.$nextTick(() => {
+          this.takeSnapshot();
+        });
+
+        this.$watch('form', () => this.checkDirty());
+
+        window.addEventListener('beforeunload', (e) => {
+          if (this.isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+          }
+        });
+
+        window.addEventListener('admin-save-form', () => {
+          if (!this.saving) this.save(false);
+        });
       },
 
       initPb(url) {
@@ -689,6 +734,8 @@ const { pageId } = Astro.props;
           // Clear localStorage draft upon successful save
           localStorage.removeItem(this.draftStorageKey);
           this.hasDraft = false;
+          this.isDirty = false;
+          this.takeSnapshot();
 
           this.emitToast('Страница успешно сохранена', 'success');
 

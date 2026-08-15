@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import ToastContainer from '../components/admin/ui/ToastContainer.astro';
 import { PB_URL, getCurrentManager, createAdminPb } from '../lib/adminAuth';
 
 interface Props {
@@ -7,7 +8,7 @@ interface Props {
   activeNav?: 'dashboard' | 'products' | 'categories' | 'pages' | 'contacts' | 'leads' | 'documents' | 'settings';
 }
 
-const { title = 'Панель управления | БелФлекс', activeNav = 'dashboard' } = Astro.props;
+const { title = 'Панель управления — Админка БелФлекс', activeNav = 'dashboard' } = Astro.props;
 
 // Read authenticated manager from middleware locals or fallback to cookie
 const cookie = Astro.request.headers.get('cookie') || '';
@@ -85,6 +86,30 @@ const navItems = [
     </style>
   </head>
   <body class="h-full bg-[#F7FAFC] text-gray-900 antialiased" x-data="{ sidebarOpen: false }">
+    <!-- Global Toasts -->
+    <ToastContainer />
+
+    <!-- Offline Alert Banner (shown when PB connection fails) -->
+    <div
+      id="admin-offline-banner"
+      style="display: none;"
+      class="bg-amber-500 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-md z-50 sticky top-0"
+    >
+      <div class="flex items-center gap-2">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+        <span>Внимание: Нет соединения с базой данных PocketBase. Проверьте статус сервера.</span>
+      </div>
+      <button
+        type="button"
+        onclick="window.location.reload()"
+        class="bg-white text-amber-900 hover:bg-amber-50 px-2.5 py-1 rounded text-xs font-bold transition-colors cursor-pointer"
+      >
+        Повторить
+      </button>
+    </div>
+
     <div class="min-h-screen flex flex-col md:flex-row">
       <!-- Backdrop for mobile drawer -->
       <div
@@ -159,25 +184,152 @@ const navItems = [
 
       <!-- Main Layout: Top Bar + Content -->
       <div class="flex-1 flex flex-col min-w-0 bg-[#F7FAFC]">
-        <!-- Top Bar (Height 64px) -->
-        <header class="h-16 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs">
-          <div class="flex items-center gap-3">
+        <!-- Top Bar (Height 64px) with Global Search -->
+        <header
+          x-data={`globalSearchManager('${PB_URL}')`}
+          x-init="init()"
+          class="h-16 bg-white border-b border-gray-200 px-4 sm:px-6 lg:px-8 flex items-center justify-between sticky top-0 z-30 shadow-xs gap-4"
+        >
+          <div class="flex items-center gap-3 min-w-0 flex-1">
             <!-- Mobile burger button -->
             <button
               type="button"
               @click="sidebarOpen = true"
-              class="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors cursor-pointer"
+              class="md:hidden p-2 rounded-lg text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors cursor-pointer flex-shrink-0"
               aria-label="Открыть меню"
             >
               <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
             </button>
-            <div class="hidden sm:block">
-              <span class="text-sm font-medium text-gray-500">Добро пожаловать,</span>
-              <span class="text-sm font-semibold text-gray-800 ml-1">{manager.name || manager.email}</span>
+
+            <!-- Global Search Bar -->
+            <div class="relative w-full max-w-md" @click.away="searchOpen = false">
+              <div class="relative flex items-center">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+                  </svg>
+                </div>
+                <input
+                  id="admin-global-search"
+                  type="text"
+                  x-model="searchQuery"
+                  @focus="if(results.length > 0) searchOpen = true"
+                  @input.debounce.250ms="performSearch()"
+                  @keydown.escape.prevent="searchOpen = false"
+                  @keydown.enter.prevent="goToFirstResult()"
+                  placeholder="Поиск по товарам, категориям, страницам... (/)"
+                  class="w-full pl-9 pr-14 py-1.5 bg-[#F7FAFC] border border-border rounded-[8px] text-xs sm:text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary focus:bg-white focus:ring-1 focus:ring-primary transition-all"
+                />
+                <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
+                  <template x-if="searching">
+                    <svg class="animate-spin h-3.5 w-3.5 text-primary" fill="none" viewBox="0 0 24 24">
+                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                  </template>
+                  <template x-if="!searching">
+                    <kbd class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono text-gray-400 bg-gray-100 border border-gray-300 rounded shadow-2xs">/</kbd>
+                  </template>
+                </div>
+              </div>
+
+              <!-- Search Dropdown Results -->
+              <div
+                x-show="searchOpen && searchQuery.trim().length >= 2"
+                x-cloak
+                x-transition:enter="transition ease-out duration-150 transform"
+                x-transition:enter-start="opacity-0 scale-95 -translate-y-1"
+                x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+                class="absolute left-0 right-0 top-full mt-1.5 bg-white rounded-[10px] shadow-2xl border border-border p-2 z-50 max-h-[380px] overflow-y-auto space-y-2 text-xs"
+              >
+                <!-- Products -->
+                <template x-if="products.length > 0">
+                  <div>
+                    <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                      <svg class="w-3.5 h-3.5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                      <span>Товары</span>
+                    </div>
+                    <div class="space-y-0.5">
+                      <template x-for="p in products" :key="p.id">
+                        <a
+                          :href="'/manage/products/' + p.id"
+                          class="flex items-center justify-between p-2 rounded-[6px] hover:bg-[#F7FAFC] text-gray-800 hover:text-primary transition-colors group"
+                        >
+                          <span class="font-medium truncate group-hover:underline" x-text="p.name"></span>
+                          <span class="text-[10px] text-gray-400 font-mono flex-shrink-0 ml-2" x-text="p.code || ''"></span>
+                        </a>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Categories -->
+                <template x-if="categories.length > 0">
+                  <div class="pt-1 border-t border-border">
+                    <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                      <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h7"/></svg>
+                      <span>Категории</span>
+                    </div>
+                    <div class="space-y-0.5">
+                      <template x-for="c in categories" :key="c.id">
+                        <a
+                          :href="'/manage/categories/' + c.id"
+                          class="flex items-center justify-between p-2 rounded-[6px] hover:bg-[#F7FAFC] text-gray-800 hover:text-blue-600 transition-colors group"
+                        >
+                          <span class="font-medium truncate group-hover:underline" x-text="c.name"></span>
+                          <span class="text-[10px] text-gray-400 font-mono flex-shrink-0 ml-2" x-text="'/' + c.slug"></span>
+                        </a>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- Pages -->
+                <template x-if="pages.length > 0">
+                  <div class="pt-1 border-t border-border">
+                    <div class="px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-1.5">
+                      <svg class="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                      <span>Страницы</span>
+                    </div>
+                    <div class="space-y-0.5">
+                      <template x-for="pg in pages" :key="pg.id">
+                        <a
+                          :href="'/manage/pages/' + pg.id"
+                          class="flex items-center justify-between p-2 rounded-[6px] hover:bg-[#F7FAFC] text-gray-800 hover:text-green-600 transition-colors group"
+                        >
+                          <span class="font-medium truncate group-hover:underline" x-text="pg.title"></span>
+                          <span class="text-[10px] text-gray-400 font-mono flex-shrink-0 ml-2" x-text="'/' + pg.slug"></span>
+                        </a>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+
+                <!-- No results -->
+                <template x-if="!searching && products.length === 0 && categories.length === 0 && pages.length === 0">
+                  <div class="py-6 text-center text-gray-400">
+                    <p class="text-xs">Ничего не найдено по запросу «<span x-text="searchQuery"></span>»</p>
+                  </div>
+                </template>
+              </div>
             </div>
           </div>
 
-          <div class="flex items-center gap-3 sm:gap-4">
+          <!-- Top Right Controls -->
+          <div class="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            <!-- Hotkey Guide Icon (Click for cheat-sheet) -->
+            <button
+              type="button"
+              onclick="showHotkeysHelp()"
+              class="hidden lg:flex items-center gap-1 py-1 px-2 rounded-[6px] text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors text-[11px] font-medium cursor-pointer"
+              title="Горячие клавиши: Ctrl+S — сохранить, / — поиск, Esc — закрыть"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"/>
+              </svg>
+              <span>Горячие клавиши</span>
+            </button>
+
             <!-- Manager badge -->
             <div class="hidden md:flex items-center gap-2 pl-2.5 pr-3 py-1 rounded-full bg-gray-50 border border-gray-200">
               <div class="w-6 h-6 rounded-full bg-[#EF1C24]/10 text-[#EF1C24] flex items-center justify-center font-bold text-xs">
@@ -191,11 +343,12 @@ const navItems = [
               type="button"
               onclick="handleLogout()"
               class="inline-flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold text-gray-700 hover:text-[#EF1C24] hover:bg-red-50 border border-gray-200 hover:border-red-200 transition-colors cursor-pointer"
+              title="Выйти из системы"
             >
               <svg class="w-4 h-4 text-gray-500 group-hover:text-[#EF1C24]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
               </svg>
-              <span>Выход</span>
+              <span class="hidden sm:inline">Выход</span>
             </button>
           </div>
         </header>
@@ -207,8 +360,15 @@ const navItems = [
       </div>
     </div>
 
-    <!-- Client-side Auth & Logout Handler -->
+    <!-- Client-side Global Search, Hotkeys & Auth Scripts -->
     <script define:vars={{ PB_URL }}>
+      // Global hotkeys helper modal
+      window.showHotkeysHelp = function() {
+        if (window.toast) {
+          window.toast.info('Горячие клавиши:\n• Ctrl+S / ⌘+S — Сохранить форму\n• / — Быстрый поиск\n• Esc — Закрыть модалку', 5000);
+        }
+      };
+
       window.handleLogout = function() {
         try {
           if (window.PocketBase) {
@@ -229,6 +389,121 @@ const navItems = [
           window.location.href = '/manage/';
         }
       })();
+
+      // Global Hotkeys Listener (Ctrl+S, Esc, /)
+      document.addEventListener('keydown', function(e) {
+        // Ctrl+S or Cmd+S -> Trigger form save
+        if ((e.ctrlKey || e.metaKey) && (e.key === 's' || e.key === 'S' || e.key === 'ы' || e.key === 'Ы')) {
+          e.preventDefault();
+          window.dispatchEvent(new CustomEvent('admin-save-form'));
+          // Also click any primary submit button on the active page if present
+          const submitBtn = document.querySelector('button[type="submit"]:not(:disabled)');
+          if (submitBtn) {
+            submitBtn.click();
+          }
+        }
+
+        // '/' key -> Focus global search (if not currently inside an input/textarea)
+        if (e.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName) && !document.activeElement.isContentEditable) {
+          e.preventDefault();
+          const searchInput = document.getElementById('admin-global-search');
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select();
+          }
+        }
+      });
+
+      // Global Alpine Search Manager Component
+      window.globalSearchManager = function(pbUrl) {
+        return {
+          pb: null,
+          pbUrl: pbUrl || 'http://127.0.0.1:8090',
+          searchQuery: '',
+          searchOpen: false,
+          searching: false,
+          products: [],
+          categories: [],
+          pages: [],
+
+          getEffectivePbUrl() {
+            if (typeof window !== 'undefined') {
+              if (window.location.hostname === 'localhost' && this.pbUrl.includes('127.0.0.1')) {
+                return this.pbUrl.replace('127.0.0.1', 'localhost');
+              }
+              if (window.location.hostname === '127.0.0.1' && this.pbUrl.includes('localhost')) {
+                return this.pbUrl.replace('localhost', '127.0.0.1');
+              }
+            }
+            return this.pbUrl || 'http://127.0.0.1:8090';
+          },
+
+          init() {
+            if (window.PocketBase) {
+              this.pb = new window.PocketBase(this.getEffectivePbUrl());
+              this.pb.autoCancellation(false);
+              this.pb.authStore.loadFromCookie(document.cookie);
+            }
+          },
+
+          async performSearch() {
+            const q = this.searchQuery.trim();
+            if (q.length < 2) {
+              this.products = [];
+              this.categories = [];
+              this.pages = [];
+              this.searchOpen = false;
+              return;
+            }
+
+            this.searching = true;
+            this.searchOpen = true;
+
+            try {
+              if (!this.pb) this.init();
+              if (!this.pb) return;
+
+              const safeQ = q.replace(/"/g, '\\"');
+
+              const [prodRes, catRes, pageRes] = await Promise.allSettled([
+                this.pb.collection('products').getList(1, 5, {
+                  filter: `name ~ "${safeQ}" || code ~ "${safeQ}"`,
+                  $autoCancel: false,
+                  requestKey: null
+                }),
+                this.pb.collection('categories').getList(1, 5, {
+                  filter: `name ~ "${safeQ}"`,
+                  $autoCancel: false,
+                  requestKey: null
+                }),
+                this.pb.collection('pages').getList(1, 5, {
+                  filter: `title ~ "${safeQ}" || slug ~ "${safeQ}"`,
+                  $autoCancel: false,
+                  requestKey: null
+                })
+              ]);
+
+              this.products = prodRes.status === 'fulfilled' ? prodRes.value.items : [];
+              this.categories = catRes.status === 'fulfilled' ? catRes.value.items : [];
+              this.pages = pageRes.status === 'fulfilled' ? pageRes.value.items : [];
+            } catch (e) {
+              console.error('Global search error:', e);
+            } finally {
+              this.searching = false;
+            }
+          },
+
+          goToFirstResult() {
+            if (this.products.length > 0) {
+              window.location.href = '/manage/products/' + this.products[0].id;
+            } else if (this.categories.length > 0) {
+              window.location.href = '/manage/categories/' + this.categories[0].id;
+            } else if (this.pages.length > 0) {
+              window.location.href = '/manage/pages/' + this.pages[0].id;
+            }
+          }
+        };
+      };
     </script>
   </body>
 </html>

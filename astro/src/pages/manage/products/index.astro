@@ -3,7 +3,7 @@ import AdminLayout from '../../../layouts/AdminLayout.astro';
 import { PB_URL } from '../../../lib/adminAuth';
 ---
 
-<AdminLayout title="Товары | БелФлекс" activeNav="products">
+<AdminLayout title="Товары — Админка БелФлекс" activeNav="products">
   <div
     x-data={`productsManager('${PB_URL}')`}
     x-init="init()"

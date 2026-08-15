@@ -1,0 +1,140 @@
+---
+// Global Toast Container for Admin Panel
+---
+
+<div
+  x-data
+  class="fixed top-6 right-6 z-50 flex flex-col gap-3 max-w-sm w-full pointer-events-none"
+  aria-live="polite"
+>
+  <template x-for="t in $store.toasts.items" :key="t.id">
+    <div
+      x-transition:enter="transition ease-out duration-300 transform"
+      x-transition:enter-start="opacity-0 translate-x-12 scale-95"
+      x-transition:enter-end="opacity-100 translate-x-0 scale-100"
+      x-transition:leave="transition ease-in duration-200 transform"
+      x-transition:leave-start="opacity-100 translate-x-0 scale-100"
+      x-transition:leave-end="opacity-0 translate-x-12 scale-95"
+      class="pointer-events-auto rounded-[10px] p-4 shadow-xl border text-sm font-medium flex items-start gap-3 transition-all bg-white text-gray-900"
+      :class="{
+        'border-green-200 border-l-4 border-l-green-500 shadow-green-500/10': t.type === 'success',
+        'border-red-200 border-l-4 border-l-[#EF1C24] shadow-red-500/10': t.type === 'error',
+        'border-blue-200 border-l-4 border-l-blue-500 shadow-blue-500/10': t.type === 'info',
+        'border-amber-200 border-l-4 border-l-amber-500 shadow-amber-500/10': t.type === 'warning'
+      }"
+    >
+      <!-- Success Icon -->
+      <template x-if="t.type === 'success'">
+        <svg class="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </template>
+
+      <!-- Error Icon -->
+      <template x-if="t.type === 'error'">
+        <svg class="w-5 h-5 text-[#EF1C24] flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </template>
+
+      <!-- Info Icon -->
+      <template x-if="t.type === 'info'">
+        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </template>
+
+      <!-- Warning Icon -->
+      <template x-if="t.type === 'warning'">
+        <svg class="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </template>
+
+      <!-- Message Content -->
+      <div class="flex-1 text-xs sm:text-sm leading-snug break-words">
+        <span x-text="t.message"></span>
+      </div>
+
+      <!-- Close Button -->
+      <button
+        type="button"
+        @click="$store.toasts.remove(t.id)"
+        class="text-gray-400 hover:text-gray-600 p-0.5 rounded transition-colors cursor-pointer flex-shrink-0"
+        aria-label="Закрыть уведомление"
+      >
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </template>
+</div>
+
+<script is:inline>
+  (function() {
+    // Initialize Alpine Toast Store
+    const initStore = () => {
+      if (!window.Alpine) return;
+      if (!window.Alpine.store('toasts')) {
+        window.Alpine.store('toasts', {
+          items: [],
+          add(message, type = 'success', timeout = 3000) {
+            const id = Date.now() + Math.random();
+            this.items.push({ id, message, type, timeout });
+            if (timeout > 0) {
+              setTimeout(() => {
+                this.remove(id);
+              }, timeout);
+            }
+          },
+          success(message, timeout = 3000) {
+            this.add(message, 'success', timeout);
+          },
+          error(message, timeout = 4000) {
+            this.add(message, 'error', timeout);
+          },
+          info(message, timeout = 3000) {
+            this.add(message, 'info', timeout);
+          },
+          warning(message, timeout = 3500) {
+            this.add(message, 'warning', timeout);
+          },
+          remove(id) {
+            this.items = this.items.filter(t => t.id !== id);
+          }
+        });
+      }
+
+      // Global window.toast helper
+      window.toast = {
+        success: (msg, duration) => window.Alpine?.store('toasts')?.success(msg, duration),
+        error: (msg, duration) => window.Alpine?.store('toasts')?.error(msg, duration),
+        info: (msg, duration) => window.Alpine?.store('toasts')?.info(msg, duration),
+        warning: (msg, duration) => window.Alpine?.store('toasts')?.warning(msg, duration),
+        add: (msg, type, duration) => window.Alpine?.store('toasts')?.add(msg, type, duration)
+      };
+    };
+
+    if (window.Alpine) {
+      initStore();
+    } else {
+      document.addEventListener('alpine:init', initStore);
+    }
+
+    // Support legacy admin-toast and toast window events
+    window.addEventListener('admin-toast', (e) => {
+      const { message, type, duration } = e.detail || {};
+      if (message) {
+        window.toast?.add(message, type || 'success', duration || 3000);
+      }
+    });
+
+    window.addEventListener('toast', (e) => {
+      const { message, type, duration } = e.detail || {};
+      if (message) {
+        window.toast?.add(message, type || 'success', duration || 3000);
+      }
+    });
+  })();
+</script>

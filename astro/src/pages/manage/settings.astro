@@ -6,7 +6,7 @@ import { PB_URL } from '../../lib/adminAuth';
 export const prerender = false;
 ---
 
-<AdminLayout title="Настройки сайта | БелФлекс Админ" activeNav="settings">
+<AdminLayout title="Настройки сайта — Админка БелФлекс" activeNav="settings">
   <div
     x-data={`settingsManager('${PB_URL}')`}
     x-init="init()"
@@ -25,7 +25,15 @@ export const prerender = false;
         </p>
       </div>
 
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-3">
+        <!-- Unsaved Changes Badge -->
+        <template x-if="isDirty">
+          <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold animate-pulse shadow-2xs">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            <span>Несохранённые изменения</span>
+          </span>
+        </template>
+
         <button
           type="button"
           @click="saveSettings()"
@@ -458,6 +466,30 @@ export const prerender = false;
         return this.pbUrl || 'http://127.0.0.1:8090';
       },
 
+      // Dirty state tracking
+      isDirty: false,
+      initialDataHash: '',
+
+      calculateHash() {
+        return JSON.stringify({
+          form: this.form,
+          hasFullLogo: Boolean(this.files.logo_full),
+          hasSquareLogo: Boolean(this.files.logo_square),
+          hasFavicon: Boolean(this.files.favicon),
+          deleteFlags: this.deleteFlags
+        });
+      },
+
+      takeSnapshot() {
+        this.initialDataHash = this.calculateHash();
+        this.isDirty = false;
+      },
+
+      checkDirty() {
+        if (!this.initialDataHash) return;
+        this.isDirty = this.calculateHash() !== this.initialDataHash;
+      },
+
       async init() {
         for (let i = 0; i < 20; i++) {
           if (window.PocketBase) break;
@@ -466,6 +498,23 @@ export const prerender = false;
 
         this.initPb();
         await this.loadSettings();
+
+        this.$nextTick(() => {
+          this.takeSnapshot();
+        });
+
+        this.$watch('form', () => this.checkDirty());
+
+        window.addEventListener('beforeunload', (e) => {
+          if (this.isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+          }
+        });
+
+        window.addEventListener('admin-save-form', () => {
+          if (!this.saving) this.saveSettings();
+        });
       },
 
       initPb() {
@@ -592,8 +641,10 @@ export const prerender = false;
             this.settingsId = updated.id;
           }
 
+          this.isDirty = false;
           this.emitToast('Настройки успешно сохранены', 'success');
           await this.loadSettings();
+          this.takeSnapshot();
         } catch (e) {
           console.error('Error saving settings:', e);
           const msg = e?.response?.message || e?.message || 'Ошибка сохранения настроек';

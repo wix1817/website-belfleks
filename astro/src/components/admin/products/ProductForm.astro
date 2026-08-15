@@ -30,8 +30,16 @@ const isEdit = Boolean(productId);
       </h1>
     </div>
 
-    <!-- Buttons -->
+    <!-- Buttons & Dirty Indicator -->
     <div class="flex flex-wrap items-center gap-2.5">
+      <!-- Unsaved Changes Badge -->
+      <template x-if="isDirty">
+        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-xs font-semibold animate-pulse shadow-2xs">
+          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+          <span>Несохранённые изменения</span>
+        </span>
+      </template>
+
       <a
         href="/manage/products"
         class="inline-flex items-center gap-1.5 py-2.5 px-4 rounded-[8px] border border-border bg-white text-gray-700 hover:bg-gray-50 text-xs font-semibold font-sans transition-colors cursor-pointer"
@@ -1466,6 +1474,33 @@ const isEdit = Boolean(productId);
         { label: 'Вес, г/м', key: 'weight_g_m' }
       ],
 
+      // Dirty state tracking
+      isDirty: false,
+      initialDataHash: '',
+
+      calculateHash() {
+        return JSON.stringify({
+          form: this.form,
+          images: this.images.map(i => ({ name: i.name, isExisting: i.isExisting, isDeleted: i.isDeleted, rawFileName: i.rawFileName })),
+          specifications: this.specifications,
+          tableColumns: this.tableColumns,
+          tableRows: this.tableRows,
+          selectedUpsells: this.selectedUpsells.map(u => u.id),
+          selectedCrossells: this.selectedCrossells.map(c => c.id),
+          faqList: this.faqList
+        });
+      },
+
+      takeSnapshot() {
+        this.initialDataHash = this.calculateHash();
+        this.isDirty = false;
+      },
+
+      checkDirty() {
+        if (!this.initialDataHash) return;
+        this.isDirty = this.calculateHash() !== this.initialDataHash;
+      },
+
       getProductImageUrl(item) {
         if (!item) return '';
         const img = Array.isArray(item.images) ? item.images[0] : (item.images || item.image || null);
@@ -1482,6 +1517,34 @@ const isEdit = Boolean(productId);
         } else {
           this.resetToDefaultColumns();
         }
+
+        // Take snapshot of initial loaded data
+        this.$nextTick(() => {
+          this.takeSnapshot();
+        });
+
+        // Watchers for dirty state
+        this.$watch('form', () => this.checkDirty());
+        this.$watch('images', () => this.checkDirty());
+        this.$watch('specifications', () => this.checkDirty());
+        this.$watch('tableRows', () => this.checkDirty());
+        this.$watch('tableColumns', () => this.checkDirty());
+        this.$watch('selectedUpsells', () => this.checkDirty());
+        this.$watch('selectedCrossells', () => this.checkDirty());
+        this.$watch('faqList', () => this.checkDirty());
+
+        // Warn before leaving page with unsaved modifications
+        window.addEventListener('beforeunload', (e) => {
+          if (this.isDirty) {
+            e.preventDefault();
+            e.returnValue = '';
+          }
+        });
+
+        // Save on Ctrl+S
+        window.addEventListener('admin-save-form', () => {
+          if (!this.saving) this.save(false);
+        });
       },
 
       initPb(url) {
@@ -2337,6 +2400,9 @@ const isEdit = Boolean(productId);
             this.emitToast('Товар успешно создан', 'success');
             window.history.replaceState(null, '', `/manage/products/${record.id}`);
           }
+
+          this.isDirty = false;
+          this.takeSnapshot();
 
           if (redirectAfter) {
             setTimeout(() => {
