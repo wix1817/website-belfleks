@@ -153,7 +153,7 @@ const faviconUrl = settings?.favicon
     )}
   </head>
   <body x-data class="min-h-screen flex flex-col font-sans bg-bg-primary text-text-primary">
-    <Header />
+    <Header settings={settings} />
 
     <main class="flex-grow">
       <slot />

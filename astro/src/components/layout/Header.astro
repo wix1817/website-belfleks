@@ -1,5 +1,18 @@
 ---
 import Search from '../ui/Search.astro';
+
+interface Props {
+  settings?: Record<string, any> | null;
+}
+
+const { settings } = Astro.props;
+const phone = settings?.phone_main || '+375 (44) 780-00-59';
+const cleanPhone = phone.replace(/[^\d+]/g, '');
+
+const pbUrl = import.meta.env.PUBLIC_PB_URL || 'http://127.0.0.1:8090';
+const logoSrc = settings?.logo_full
+  ? `${pbUrl}/api/files/${settings.collectionId}/${settings.id}/${settings.logo_full}`
+  : '/logo_full.svg';
 ---
 
 <header
@@ -14,13 +27,13 @@ import Search from '../ui/Search.astro';
         <a href="/" class="flex items-center focus:outline-none focus:ring-2 focus:ring-primary/20 rounded-lg p-0.5" aria-label="ООО БелФлекс — на главную">
           <!-- Desktop: scaled gracefully from 1024px to 1440px+ -->
           <img
-            src="/logo_full.svg"
+            src={logoSrc}
             alt="ООО БелФлекс"
             class="hidden lg:block h-11 xl:h-12 w-auto object-contain transition-transform duration-200 hover:scale-[1.01]"
           />
           <!-- Tablet / Mobile -->
           <img
-            src="/logo_full.svg"
+            src={logoSrc}
             alt="ООО БелФлекс"
             class="lg:hidden h-9 sm:h-10 w-auto object-contain"
           />
@@ -93,13 +106,13 @@ import Search from '../ui/Search.astro';
 
         <!-- Phone link with subtle icon -->
         <a
-          href="tel:+375447800059"
+          href={`tel:${cleanPhone}`}
           class="flex items-center gap-1.5 text-text-primary font-semibold hover:text-primary transition-colors text-xs xl:text-sm tracking-wide whitespace-nowrap py-1.5 px-2 rounded-lg hover:bg-bg-secondary/60"
         >
           <svg class="w-4 h-4 text-primary flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
           </svg>
-          <span>+375 (44) 780-00-59</span>
+          <span>{phone}</span>
         </a>
 
         <!-- Primary CTA Button -->
@@ -213,13 +226,13 @@ import Search from '../ui/Search.astro';
           Оставить заявку
         </button>
         <a
-          href="tel:+375447800059"
+          href={`tel:${cleanPhone}`}
           class="flex items-center justify-center gap-2 w-full py-2.5 text-text-primary font-semibold text-sm rounded-lg hover:bg-bg-secondary transition-colors"
         >
           <svg class="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
           </svg>
-          +375 (44) 780-00-59
+          {phone}
         </a>
       </div>
     </div>
