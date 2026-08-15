@@ -620,15 +620,18 @@ export const prerender = false;
             filterParts.push(`created <= "${this.dateTo} 23:59:59"`);
           }
 
-          const filter = filterParts.length > 0 ? filterParts.join(' && ') : undefined;
-
-          const result = await this.pb.collection('contacts').getList(this.currentPage, this.perPage, {
+          const options = {
             sort: '-created',
             expand: 'product',
-            filter: filter,
             $autoCancel: false,
             requestKey: null
-          });
+          };
+
+          if (filterParts.length > 0) {
+            options.filter = filterParts.join(' && ');
+          }
+
+          const result = await this.pb.collection('contacts').getList(this.currentPage, this.perPage, options);
 
           this.items = result.items || [];
           this.totalItems = result.totalItems || 0;
@@ -756,17 +759,20 @@ export const prerender = false;
           if (this.dateFrom) filterParts.push(`created >= "${this.dateFrom} 00:00:00"`);
           if (this.dateTo) filterParts.push(`created <= "${this.dateTo} 23:59:59"`);
 
-          const filter = filterParts.length > 0 ? filterParts.join(' && ') : undefined;
+          const options = {
+            sort: '-created',
+            expand: 'product',
+            $autoCancel: false,
+            requestKey: null
+          };
+
+          if (filterParts.length > 0) {
+            options.filter = filterParts.join(' && ');
+          }
 
           if (!this.pb) this.initPb();
 
-          const allRecords = await this.pb.collection('contacts').getFullList({
-            sort: '-created',
-            expand: 'product',
-            filter: filter,
-            $autoCancel: false,
-            requestKey: null
-          });
+          const allRecords = await this.pb.collection('contacts').getFullList(options);
 
           if (allRecords.length === 0) {
             this.emitToast('Нет данных для экспорта', 'warning');
