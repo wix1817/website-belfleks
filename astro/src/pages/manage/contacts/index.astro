@@ -554,23 +554,52 @@ export const prerender = false;
         }).length;
       },
 
+      getEffectivePbUrl() {
+        if (typeof window !== 'undefined') {
+          // If accessing via localhost or custom host, match the hostname to prevent cross-origin cookie issues
+          if (window.location.hostname === 'localhost' && this.pbUrl.includes('127.0.0.1')) {
+            return this.pbUrl.replace('127.0.0.1', 'localhost');
+          }
+          if (window.location.hostname === '127.0.0.1' && this.pbUrl.includes('localhost')) {
+            return this.pbUrl.replace('localhost', '127.0.0.1');
+          }
+        }
+        return this.pbUrl || 'http://127.0.0.1:8090';
+      },
+
       async init() {
+        // Wait for window.PocketBase if script tag is still resolving
+        for (let i = 0; i < 20; i++) {
+          if (window.PocketBase) break;
+          await new Promise(r => setTimeout(r, 50));
+        }
+
+        this.initPb();
+        await this.fetchContacts();
+      },
+
+      initPb() {
         if (window.PocketBase) {
-          this.pb = new window.PocketBase(this.pbUrl);
+          const url = this.getEffectivePbUrl();
+          this.pb = new window.PocketBase(url);
           this.pb.autoCancellation(false);
           this.pb.authStore.loadFromCookie(document.cookie);
         }
-        await this.fetchContacts();
       },
 
       async fetchContacts() {
         this.loading = true;
         try {
-          if (!this.pb && window.PocketBase) {
-            this.pb = new window.PocketBase(this.pbUrl);
-            this.pb.authStore.loadFromCookie(document.cookie);
+          if (!this.pb) {
+            this.initPb();
           }
-          if (!this.pb) return;
+          if (!this.pb) {
+            await new Promise(r => setTimeout(r, 100));
+            this.initPb();
+          }
+          if (!this.pb) {
+            throw new Error('Библиотека PocketBase не загружена');
+          }
 
           const filterParts = [];
 
@@ -584,25 +613,25 @@ export const prerender = false;
           }
 
           if (this.dateFrom) {
-            filterParts.push(`created >= "${this.dateFrom} 00:00:00.000Z"`);
+            filterParts.push(`created >= "${this.dateFrom} 00:00:00"`);
           }
 
           if (this.dateTo) {
-            filterParts.push(`created <= "${this.dateTo} 23:59:59.999Z"`);
+            filterParts.push(`created <= "${this.dateTo} 23:59:59"`);
           }
 
-          const filter = filterParts.join(' && ');
+          const filter = filterParts.length > 0 ? filterParts.join(' && ') : undefined;
 
           const result = await this.pb.collection('contacts').getList(this.currentPage, this.perPage, {
             sort: '-created',
             expand: 'product',
-            filter: filter || undefined,
+            filter: filter,
             $autoCancel: false,
             requestKey: null
           });
 
-          this.items = result.items;
-          this.totalItems = result.totalItems;
+          this.items = result.items || [];
+          this.totalItems = result.totalItems || 0;
           this.totalPages = result.totalPages || 1;
 
           // Dynamically gather other unique sources if any
@@ -702,7 +731,7 @@ export const prerender = false;
         }
 
         try {
-          if (!this.pb && window.PocketBase) this.pb = new window.PocketBase(this.pbUrl);
+          if (!this.pb) this.initPb();
           await this.pb.collection('contacts').delete(lead.id);
           this.emitToast('Заявка удалена', 'success');
           await this.fetchContacts();
@@ -724,13 +753,17 @@ export const prerender = false;
             filterParts.push(`(name ~ "${q}" || phone ~ "${q}" || email ~ "${q}" || company ~ "${q}" || message ~ "${q}")`);
           }
           if (this.sourceFilter) filterParts.push(`source = "${this.sourceFilter}"`);
-          if (this.dateFrom) filterParts.push(`created >= "${this.dateFrom} 00:00:00.000Z"`);
-          if (this.dateTo) filterParts.push(`created <= "${this.dateTo} 23:59:59.999Z"`);
+          if (this.dateFrom) filterParts.push(`created >= "${this.dateFrom} 00:00:00"`);
+          if (this.dateTo) filterParts.push(`created <= "${this.dateTo} 23:59:59"`);
+
+          const filter = filterParts.length > 0 ? filterParts.join(' && ') : undefined;
+
+          if (!this.pb) this.initPb();
 
           const allRecords = await this.pb.collection('contacts').getFullList({
             sort: '-created',
             expand: 'product',
-            filter: filterParts.join(' && ') || undefined,
+            filter: filter,
             $autoCancel: false,
             requestKey: null
           });
